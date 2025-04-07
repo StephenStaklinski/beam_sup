@@ -1,12 +1,14 @@
 """Main class for BEAM results analysis."""
 
-from typing import Optional, Dict, List, Union
+from typing import Optional, Dict, List, Union, Tuple
 import dendropy
 import pandas as pd
+import numpy as np
 from . import data_loader
 from . import plotting
 from . import formatting
 from . import config
+from . import statistics
 
 class BeamResults:
     """A class to handle BEAM output visualization and analysis."""
@@ -207,5 +209,41 @@ class BeamResults:
             threshold=threshold,
             output_file_prefix=output_file_prefix,
             consensus_graph=self.consensus_graph
+        )
+    
+    def compute_posterior_mutual_info(
+        self,
+        output_file_matrix: Optional[str] = None,
+        output_file_information: Optional[str] = None,
+        threads: int = 1
+    ) -> Tuple[float, np.ndarray, List[str]]:
+        """Calculate mutual information from migration patterns in the trees.
+        
+        Args:
+            output_file_matrix: Optional path to save the count matrix
+            output_file_information: Optional path to save the mutual information score
+            threads: Number of threads to use for parallel processing
+            
+        Returns:
+            Tuple containing:
+                - Mutual information score
+                - Count matrix as numpy array
+                - List of tissue names in order
+                
+        Raises:
+            ValueError: If primary_tissue is not set
+        """
+        if self.primary_tissue is None:
+            raise ValueError("Primary tissue must be set before computing mutual information")
+            
+        if self.trees is None:
+            raise ValueError("Trees must be loaded before computing mutual information")
+            
+        return statistics.compute_posterior_mutual_info(
+            trees=self.trees,
+            origin_tissue=self.primary_tissue,
+            threads=threads,
+            output_file_matrix=output_file_matrix,
+            output_file_information=output_file_information
         )
 

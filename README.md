@@ -26,10 +26,10 @@ from beam_visualization import BeamResults
 
 # Initialize with BEAM output files
 results = BeamResults(
-            "examples/data/example.trees", 
-            "examples/data/example.log", 
-            primary_tissue="LL"
-            )
+    "examples/data/example.trees", 
+    "examples/data/example.log", 
+    primary_tissue="LL"
+    )
 
 # Get information about the loaded data
 results.info()
@@ -43,14 +43,26 @@ stats = results.get_parameter_stats(parameters[10])
 print(f"Rate statistics: {stats}")
 
 # Plot parameter distributions
-results.plot_parameters(parameters[10], output_file = "examples/param.pdf")
+results.plot_parameters(
+    parameters[10], 
+    output_file = "examples/param.pdf"
+    )
 
 # Get consensus graph
 results.get_consensus_graph()
 
 # Plot consensus graph
 results.plot_probability_graph(output_file="examples/probability_graph.pdf")
-results.plot_thresholded_graph(threshold=[0.5, 0.75, 0.90], output_file_prefix="examples/thresholded_graph")
+results.plot_thresholded_graph(
+    threshold=[0.5, 0.75, 0.90], 
+    output_file_prefix="examples/thresholded_graph"
+    )
+
+# Calculate mutual information based on a migration count matrix from traversing the posterior trees
+results.compute_posterior_mutual_info(
+    output_file_matrix = "examples/mutual_info_matrix.csv", 
+    output_file_information = "examples/mutual_info.txt"
+    )
 ```
 
 ## Running Tests
