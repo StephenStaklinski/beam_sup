@@ -37,3 +37,7 @@ Thumbs.db
 
 # Tests
 .coverage
+
+# Example outputs
+examples/*.pdf
+examples/*.csv

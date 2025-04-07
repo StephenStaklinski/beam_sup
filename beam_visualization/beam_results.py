@@ -1,6 +1,6 @@
 """Main class for BEAM results analysis."""
 
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 import dendropy
 import pandas as pd
 from . import data_loader
@@ -178,16 +178,17 @@ class BeamResults:
     
     def plot_thresholded_graph(
         self,
-        threshold: float = 0.5,
-        output_file: Optional[str] = None,
+        threshold: Union[float, List[float]] = 0.5,
+        output_file_prefix: Optional[str] = None,
         primary_tissue: Optional[str] = None
     ) -> None:
         """
         Plot the thresholded consensus migration graph with collapsed multiedges.
         
         Args:
-            threshold: Probability threshold for filtering edges
-            output_file: Optional path to save the plot. If None, displays the plot.
+            threshold: Single threshold value or list of thresholds for filtering edges
+            output_file_prefix: Optional prefix for output files. If None, displays the plot(s).
+                              For multiple thresholds, each file will be named {prefix}_{threshold}.pdf
             primary_tissue: Primary tissue label for migration analysis. If None, uses the primary_tissue from initialization.
             
         Raises:
@@ -204,7 +205,7 @@ class BeamResults:
             data=self.log_data,
             primary_tissue=primary_tissue or self.primary_tissue,
             threshold=threshold,
-            output_file=output_file,
+            output_file_prefix=output_file_prefix,
             consensus_graph=self.consensus_graph
         )
 

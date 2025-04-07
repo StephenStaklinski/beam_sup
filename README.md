@@ -65,7 +65,7 @@ results.get_consensus_graph()
 
 # Plot consensus graph
 results.plot_probability_graph(output_file="examples/probability_graph.pdf")
-results.plot_thresholded_graph(threshold=0.5, output_file="examples/thresholded_graph.pdf")
+results.plot_thresholded_graph(threshold=[0.5, 0.75, 0.90], output_file_prefix="examples/thresholded_graph")
 ```
 
 ## Features
@@ -92,7 +92,6 @@ pytest
 # Run tests without coverage report
 pytest --no-cov
 ```
-
 The test suite includes:
 - Unit tests for all major functionality
 - Test fixtures for sample data
@@ -102,3 +101,4 @@ The test suite includes:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
