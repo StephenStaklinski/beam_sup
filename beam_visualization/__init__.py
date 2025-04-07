@@ -1,6 +1,6 @@
-"""BEAM visualization and analysis package."""
+"""BEAM visualization package."""
 
-from .beam_results import BeamResults
+from .main import BeamResults
 from .plotting import plot_parameters
 from .formatting import get_consensus_graph
 from .data_loader import load_beam_files
