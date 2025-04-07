@@ -18,23 +18,8 @@ cd beam_visualization
 pip install -e ".[test]"
 ```
 
-Or similarly, but with conda:
 
-```bash
-git clone https://github.com/StephenStaklinski/beam_visualization.git
-conda create -n beam_visualization python
-conda activate beam_visualization
-pip install -e ".[test]"
-```
-
-## Usage
-
-The package provides functionality to load and visualize BEAM outputs, including:
-- Parameter distributions from log files
-- Migration graphs
-- Rate matrices
-
-### Basic Usage
+## Basic Usage
 
 ```python
 from beam_visualization import BeamResults
@@ -68,17 +53,7 @@ results.plot_probability_graph(output_file="examples/probability_graph.pdf")
 results.plot_thresholded_graph(threshold=[0.5, 0.75, 0.90], output_file_prefix="examples/thresholded_graph")
 ```
 
-## Features
-
-- Load and parse BEAM output files (.trees and .log)
-- Visualize parameter distributions
-- Calculate migration consensus graphs
-- Parallel processing support
-- Flexible burnin handling
-
-## Development
-
-### Running Tests
+## Running Tests
 
 To run the test suite:
 
