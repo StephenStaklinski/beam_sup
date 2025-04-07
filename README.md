@@ -1,6 +1,6 @@
 # BEAM Visualization
 
-A Python package for visualizing and analyzing outputs from the BEAM phylogenetic tree analysis package.
+A Python package for visualizing and analyzing BEAM (Bayesian Evolutionary Analysis by Sampling Trees) output.
 
 ## Installation
 
@@ -40,28 +40,38 @@ The package provides functionality to load and visualize BEAM outputs, including
 ```python
 from beam_visualization import BeamResults
 
-data = "./examples/data/"
-trees = data + "example.trees" 
-log = data + "example.log"
+# Initialize with BEAM output files
+results = BeamResults(
+            "examples/data/example.trees", 
+            "examples/data/example.log", 
+            primary_tissue="LL"
+            )
 
-# Load BEAM results
-results = BeamResults(trees, log)
+# Get information about the loaded data
 results.info()
 
-# Plot parameter distributions
-results.plot_parameters(output_file="./all_parameters.pdf")  # Plot all parameters
+# List available parameters
+parameters = results.get_parameters()
+print(f"Available parameters: {parameters}")
 
-param = results.get_parameters()[14]    # View the names of parameters that were logged and pick one
-results.plot_parameters(param, output_file="./rate.pdf")  # Plot specific parameter
-results.get_parameter_stats(param)  # Calculate basic statistics about specific parameter
+# Get statistics for a parameter
+stats = results.get_parameter_stats(parameters[10])
+print(f"Rate statistics: {stats}")
+
+# Plot parameter distributions
+results.plot_parameters(parameters[10], output_file = "examples/param.pdf")
+
+# Get consensus graph
+consensus = results.get_consensus_graph()
 ```
 
 ## Features
 
 - Load and parse BEAM output files (.trees and .log)
-- Plot parameter distributions and statistics
-- Generate migration graphs
-- Analyze rate matrices
+- Visualize parameter distributions
+- Calculate migration consensus graphs
+- Parallel processing support
+- Flexible burnin handling
 
 ## Development
 

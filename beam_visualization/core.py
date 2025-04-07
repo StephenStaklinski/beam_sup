@@ -5,25 +5,71 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Optional, Dict, List, Union
 import dendropy
+from scipy.stats import gaussian_kde
+from ete3 import Tree
+from copy import deepcopy
+from multiprocessing import Pool
+
+def _process_tree_for_consensus(tree, primary_tissue):
+    """Process a single tree to get migration counts."""
+    # Convert to ete3 tree
+    tree_copy = deepcopy(tree)
+    for node in tree_copy.preorder_node_iter():
+        try:
+            prediction = node.taxon.label + "_" + node.annotations.get_value("location")
+            node.taxon.label = prediction
+        except:
+            prediction = f"node_{node.annotations.get_value('location')}"
+        node.label = prediction
+    
+    ete_tree = Tree(tree_copy.as_string(schema="newick").replace("'", ""), format=3)
+    
+    # Get migration counts
+    counts = {}
+    for node in ete_tree.traverse():
+        if node.is_root():
+            continue
+        node_tissue = node.name.split("_")[-1]
+        parent_tissue = node.up.name.split("_")[-1]
+        if node_tissue != parent_tissue:
+            migration = f"{parent_tissue}_{node_tissue}"
+            counts[migration] = counts.get(migration, 0) + 1
+    
+    # Add origin migration if needed
+    if primary_tissue:
+        root_tissue = ete_tree.get_tree_root().name.split("_")[-1]
+        if root_tissue != primary_tissue:
+            migration = f"{primary_tissue}_{root_tissue}"
+            counts[migration] = counts.get(migration, 0) + 1
+    
+    return counts
+
+def _process_tree_wrapper(args):
+    """Wrapper function for parallel processing of trees."""
+    tree, primary_tissue = args
+    return _process_tree_for_consensus(tree, primary_tissue)
 
 class BeamResults:
     """A class to handle BEAM output visualization and analysis."""
     
-    def __init__(self, trees_file: str, log_file: str):
+    def __init__(self, trees_file: str, log_file: str, primary_tissue: Optional[str] = None):
         """
         Initialize BeamResults with BEAM output files.
         
         Args:
             trees_file (str): Path to the .trees file
             log_file (str): Path to the .log file
+            primary_tissue (str, optional): Primary tissue label for migration analysis
         """
         print(f"Initializing BeamResults with files:")
         print(f"  Trees file: {trees_file}")
         print(f"  Log file: {log_file}")
         self.trees_file = trees_file
         self.log_file = log_file
+        self.primary_tissue = primary_tissue
         self.trees = None
         self.log_data = None
+        self.consensus_graph = None
         self._load_data()
     
     def _load_data(self):
@@ -68,25 +114,38 @@ class BeamResults:
             print(f"  Error loading log file: {e}")
             raise
     
+    
     def info(self) -> None:
         """Print information about the loaded data."""
         print("\nBeamResults Object Information:")
         print("===============================")
         print(f"Trees file: {self.trees_file}")
         print(f"Log file: {self.log_file}")
-        print(f"\nTrees (self.trees):")
+        print(f"Primary tissue: {self.primary_tissue}")
+        print(f"\nTrees:")
         print(f"  Number of trees: {len(self.trees)}")
         print(f"  Taxa: {', '.join(self.trees.taxon_namespace.labels())}")
-        print(f"\nLog Data (self.log_data):")
+        print(f"\nLog Data:")
         print(f"  Number of samples: {len(self.log_data)}")
         print(f"  Parameters: {', '.join(self.log_data.columns)}")
+        if self.consensus_graph is not None:
+            print(f"\nMigration Analysis:")
+            print(f"  Number of migrations: {len(self.consensus_graph)}")
+            top_migrations = sorted(
+                self.consensus_graph.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )[:5]
+            print("  Top migrations:")
+            for migration, prob in top_migrations:
+                print(f"    {migration}: {prob:.4f}")
         print("\nAvailable Methods:")
         print("  - info(): Show this information")
         print("  - get_parameters(): List available parameters")
         print("  - get_parameter_stats(parameter): Get statistics for a parameter")
+        print("  - get_trees(): Get the loaded trees")
         print("  - plot_parameters(): Plot parameter distributions")
-        print("  - plot_migration_graphs(): Plot migration graphs")
-        print("  - plot_rate_matrix(): Plot rate matrix")
+        print("  - get_consensus_graph(): Calculate consensus graph from migration counts")
     
     def get_parameters(self) -> List[str]:
         """
@@ -121,6 +180,15 @@ class BeamResults:
         }
         return stats
     
+    def get_trees(self) -> dendropy.TreeList:
+        """
+        Get the loaded trees.
+        
+        Returns:
+            dendropy.TreeList: The loaded trees
+        """
+        return self.trees
+    
     def plot_parameters(self, parameter: Optional[str] = None, output_file: Optional[str] = None) -> None:
         """
         Plot parameter distributions from the log file.
@@ -146,6 +214,57 @@ class BeamResults:
             plt.close()
         else:
             plt.show()
+    
+    def get_consensus_graph(self, primary_tissue: Optional[str] = None, burnin_percent: float = 0.0, cores: int = 1) -> Dict[str, float]:
+        """
+        Calculate consensus graph from migration counts in trees.
+        
+        Args:
+            primary_tissue (str, optional): Primary tissue label for migration analysis. If None, uses the one set during initialization.
+            burnin_percent (float): Percentage of trees to discard as burnin. Default is 0.0 (no burnin).
+            cores (int): Number of CPU cores to use for parallel processing. Default is 1 (single core).
+            
+        Returns:
+            Dict[str, float]: Dictionary mapping migration patterns to their probabilities.
+            Each key is in the format "source_tissue_dest_tissue_count" and the value is the probability
+            of that migration pattern occurring in the posterior distribution.
+            
+        Raises:
+            ValueError: If primary_tissue is not specified either during initialization or as an argument.
+        """
+        # Use provided primary_tissue or the one from initialization
+        if primary_tissue is None:
+            if self.primary_tissue is None:
+                raise ValueError("Primary tissue must be specified either during initialization or as an argument")
+            primary_tissue = self.primary_tissue
+        
+        print("\nCalculating consensus graph...")
+        
+        # Process posterior trees
+        num_trees = len(self.trees)
+        num_discard = round(num_trees * burnin_percent)
+        trees_to_analyze = self.trees[num_discard:]
+        
+        print(f"  Analyzing {len(trees_to_analyze)} trees (after {num_discard} burnin)")
+        
+        # Process trees in parallel
+        with Pool(processes=cores) as pool:
+            all_counts = pool.map(
+                _process_tree_wrapper,
+                [(tree, primary_tissue) for tree in trees_to_analyze]
+            )
+        
+        # Calculate consensus graph
+        prob = 1 / len(all_counts)
+        self.consensus_graph = {}
+        for counts in all_counts:
+            for migration, count in counts.items():
+                for i in range(1, count + 1):
+                    edge = f"{migration}_{i}"
+                    self.consensus_graph[edge] = self.consensus_graph.get(edge, 0) + prob
+        
+        print("  Consensus graph calculation complete")
+        return self.consensus_graph
     
 
     
