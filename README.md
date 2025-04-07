@@ -25,7 +25,6 @@ git clone https://github.com/StephenStaklinski/beam_visualization.git
 conda create -n beam_visualization python
 conda activate beam_visualization
 pip install -e ".[test]"
-
 ```
 
 ## Usage
@@ -62,7 +61,11 @@ print(f"Rate statistics: {stats}")
 results.plot_parameters(parameters[10], output_file = "examples/param.pdf")
 
 # Get consensus graph
-consensus = results.get_consensus_graph()
+results.get_consensus_graph()
+
+# Plot consensus graph
+results.plot_probability_graph(output_file="examples/probability_graph.pdf")
+results.plot_thresholded_graph(threshold=0.5, output_file="examples/thresholded_graph.pdf")
 ```
 
 ## Features

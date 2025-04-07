@@ -3,10 +3,10 @@
 from typing import Optional, Dict, List
 import dendropy
 import pandas as pd
-from .data_loader import load_beam_files
-from .plotting import plot_parameters
-from .formatting import get_consensus_graph
-from .config import DEFAULT_BURNIN_PERCENT, DEFAULT_CORES
+from . import data_loader
+from . import plotting
+from . import formatting
+from . import config
 
 class BeamResults:
     """A class to handle BEAM output visualization and analysis."""
@@ -23,7 +23,7 @@ class BeamResults:
         self.trees_file = trees_file
         self.log_file = log_file
         self.primary_tissue = primary_tissue
-        self.trees, self.log_data = load_beam_files(trees_file, log_file)
+        self.trees, self.log_data = data_loader.load_beam_files(trees_file, log_file)
         self.consensus_graph = None
         
         # Validate data
@@ -107,13 +107,14 @@ class BeamResults:
             parameter: Specific parameter to plot. If None, plots all parameters.
             output_file: Path to save the plot. If None, displays the plot.
         """
-        plot_parameters(self.log_data, parameter, output_file)
+        plotting.plot_parameters(self.log_data, parameter, output_file)
     
     def get_consensus_graph(
         self,
         primary_tissue: Optional[str] = None,
-        burnin_percent: float = DEFAULT_BURNIN_PERCENT,
-        cores: int = DEFAULT_CORES
+        burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
+        cores: int = config.DEFAULT_CORES,
+        output_file: Optional[str] = None
     ) -> Dict[str, float]:
         """
         Calculate consensus graph from migration counts in trees.
@@ -122,14 +123,88 @@ class BeamResults:
             primary_tissue: Primary tissue label for migration analysis
             burnin_percent: Percentage of trees to discard as burnin
             cores: Number of CPU cores to use for parallel processing
+            output_file: Optional path to write the consensus graph to a file
             
         Returns:
             Dict[str, float]: Dictionary mapping migration patterns to their probabilities
         """
-        self.consensus_graph = get_consensus_graph(
+        self.consensus_graph = formatting.get_consensus_graph(
             self.trees,
             primary_tissue or self.primary_tissue,
             burnin_percent,
             cores
         )
-        return self.consensus_graph 
+        
+        if output_file:
+            # Sort the graph by probability in descending order
+            sorted_graph = dict(
+                sorted(self.consensus_graph.items(), key=lambda x: x[1], reverse=True)
+            )
+            # Write to file
+            with open(output_file, "w") as file:
+                for key, value in sorted_graph.items():
+                    file.write(f"{key},{value}\n")
+        
+        return self.consensus_graph
+    
+    def plot_probability_graph(
+        self,
+        output_file: Optional[str] = None,
+        primary_tissue: Optional[str] = None
+    ) -> None:
+        """
+        Plot the consensus migration graph with edge thicknesses proportional to probability.
+        
+        Args:
+            output_file: Optional path to save the plot. If None, displays the plot.
+            primary_tissue: Primary tissue label for migration analysis. If None, uses the primary_tissue from initialization.
+            
+        Raises:
+            ValueError: If primary_tissue is not provided either here or during initialization
+        """
+        if primary_tissue is None and self.primary_tissue is None:
+            raise ValueError("Primary tissue must be provided either during initialization or when calling plot_probability_graph")
+        
+        if self.consensus_graph is None:
+            # Compute consensus graph if not already available
+            self.get_consensus_graph(primary_tissue=primary_tissue or self.primary_tissue)
+        
+        plotting.plot_probability_graph(
+            data=self.log_data,
+            primary_tissue=primary_tissue or self.primary_tissue,
+            output_file=output_file,
+            consensus_graph=self.consensus_graph
+        )
+    
+    def plot_thresholded_graph(
+        self,
+        threshold: float = 0.5,
+        output_file: Optional[str] = None,
+        primary_tissue: Optional[str] = None
+    ) -> None:
+        """
+        Plot the thresholded consensus migration graph with collapsed multiedges.
+        
+        Args:
+            threshold: Probability threshold for filtering edges
+            output_file: Optional path to save the plot. If None, displays the plot.
+            primary_tissue: Primary tissue label for migration analysis. If None, uses the primary_tissue from initialization.
+            
+        Raises:
+            ValueError: If primary_tissue is not provided either here or during initialization
+        """
+        if primary_tissue is None and self.primary_tissue is None:
+            raise ValueError("Primary tissue must be provided either during initialization or when calling plot_thresholded_graph")
+        
+        if self.consensus_graph is None:
+            # Compute consensus graph if not already available
+            self.get_consensus_graph(primary_tissue=primary_tissue or self.primary_tissue)
+        
+        plotting.plot_thresholded_graph(
+            data=self.log_data,
+            primary_tissue=primary_tissue or self.primary_tissue,
+            threshold=threshold,
+            output_file=output_file,
+            consensus_graph=self.consensus_graph
+        )
+
