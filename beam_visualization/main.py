@@ -246,4 +246,48 @@ class BeamResults:
             output_file_matrix=output_file_matrix,
             output_file_information=output_file_information
         )
+    
+    def sample_and_plot_trees(
+        self,
+        n: int = 1,
+        total_time: float = 1.0,
+        output_prefix: Optional[str] = None,
+        burnin_percent: float = 0.1
+    ) -> None:
+        """
+        Sample trees from the posterior and plot them with their migration graphs.
+        
+        Args:
+            n: Number of trees to sample
+            total_time: Total time of the tree
+            output_prefix: Optional prefix for output files. If None, plots are displayed instead of saved.
+            burnin_percent: Percentage of trees to discard as burnin
+            
+        Raises:
+            ValueError: If primary_tissue is not set
+        """
+        if self.primary_tissue is None:
+            raise ValueError("Primary tissue must be set before plotting sampled trees")
+            
+        if self.trees is None:
+            raise ValueError("Trees must be loaded before plotting sampled trees")
+            
+        # Sample trees
+        sampled_trees = formatting.sample_trees(
+            self.trees,
+            n=n,
+            burnin_percent=burnin_percent,
+            output_prefix=output_prefix
+        )
+        
+        if output_prefix:
+            # Plot each tree
+            for i, tree in enumerate(sampled_trees, 1):
+                plotting.plot_sampled_tree(
+                    newick_str=tree,
+                    primary_tissue=self.primary_tissue,
+                    total_time=total_time,
+                    output_prefix=output_prefix,
+                    tree_num=i
+                )
 

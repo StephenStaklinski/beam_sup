@@ -1,8 +1,9 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from copy import deepcopy
 from multiprocessing import Pool
 import dendropy
 from ete3 import Tree
+import random
 
 def _process_tree_for_consensus(tree, primary_tissue):
     """Process a single tree to get migration counts."""
@@ -84,4 +85,61 @@ def get_consensus_graph(trees: dendropy.TreeList, primary_tissue: str, burnin_pe
                 consensus_graph[edge] = consensus_graph.get(edge, 0) + prob
     
     print("  Consensus graph calculation complete")
-    return consensus_graph 
+    return consensus_graph
+
+def sample_trees(trees: dendropy.TreeList, n: int = 1, burnin_percent: float = 0.1, output_prefix: Optional[str] = None) -> List[str]:
+    """
+    Sample trees from the posterior distribution.
+    
+    Args:
+        trees: Dendropy TreeList object
+        n: Number of trees to sample
+        burnin_percent: Percentage of trees to discard as burnin
+        output_prefix: Optional prefix for output files. If None, trees are not written to file.
+        
+    Returns:
+        List[str]: List of newick strings for sampled trees with location annotations preserved
+    """
+    # Calculate burnin
+    num_discard = round(len(trees) * burnin_percent)
+    available_trees = range(num_discard, len(trees))
+    
+    # Sample tree indices
+    sampled_indices = random.sample(list(available_trees), k=min(n, len(available_trees)))
+    
+    # Process only the sampled trees
+    sampled_trees = []
+    for idx in sampled_indices:
+        # Create a copy to modify
+        tree_copy = trees[idx].clone()
+        
+        # Process each node to add names and preserve location annotations
+        i = 1
+        for node in tree_copy.preorder_node_iter():
+            location = node.annotations.get_value("location")
+            if node.taxon:
+                if not node.taxon.label:
+                    node.taxon.label = f"node{i}"
+                    i += 1
+                # Only add location annotation if it's not already there
+                if "[&location=" not in node.taxon.label:
+                    node.taxon.label = f"{node.taxon.label}[&location=\"{location}\"]"
+            else:
+                if not node.label:
+                    node.label = f"node{i}"
+                    i += 1
+                # Only add location annotation if it's not already there
+                if "[&location=" not in node.label:
+                    node.label = f"{node.label}[&location=\"{location}\"]"
+        
+        # Convert to newick string
+        sampled_trees.append(tree_copy.as_string(schema="newick").strip())
+    
+    # Write to file if output_prefix is specified
+    if output_prefix:
+        output_file = f"{output_prefix}_sampled_trees.txt"
+        with open(output_file, 'w') as f:
+            for tree in sampled_trees:
+                f.write(tree + '\n')
+    
+    return sampled_trees 

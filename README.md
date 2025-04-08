@@ -63,6 +63,13 @@ results.compute_posterior_mutual_info(
     output_file_matrix = "examples/mutual_info_matrix.csv", 
     output_file_information = "examples/mutual_info.txt"
     )
+
+# Sample and plot individual posterior tree samples as tree, graph, and timing plots
+results.sample_and_plot_trees(
+    n=2,
+    total_time=54,
+    output_prefix="examples/posterior_tree_sample"
+)
 ```
 
 ## Running Tests
