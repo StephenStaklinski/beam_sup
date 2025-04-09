@@ -7,12 +7,6 @@ A Python package for visualizing and analyzing BEAM (Bayesian Evolutionary Analy
 You can install the package using pip:
 
 ```bash
-pip install beam_visualization
-```
-
-For development installation (including test dependencies):
-
-```bash
 git clone https://github.com/StephenStaklinski/beam_visualization.git
 cd beam_visualization
 pip install -e ".[test]"
@@ -22,10 +16,10 @@ pip install -e ".[test]"
 ## Basic Usage
 
 ```python
-from beam_visualization import BeamResults
+import beam_visualization
 
 # Initialize with BEAM output files
-results = BeamResults(
+results = beam_visualization.BeamResults(
     "examples/data/example.trees", 
     "examples/data/example.log", 
     primary_tissue="LL"
@@ -39,8 +33,7 @@ parameters = results.get_parameters()
 print(f"Available parameters: {parameters}")
 
 # Get statistics for a parameter
-stats = results.get_parameter_stats(parameters[10])
-print(f"Rate statistics: {stats}")
+results.get_parameter_stats(parameters[10])
 
 # Plot parameter distributions
 results.plot_parameters(
@@ -49,7 +42,9 @@ results.plot_parameters(
     )
 
 # Get consensus graph
-results.get_consensus_graph()
+results.get_consensus_graph(
+    output_file = "examples/probability_graph.csv"
+    )
 
 # Plot consensus graph
 results.plot_probability_graph(output_file="examples/probability_graph.pdf")
@@ -69,6 +64,12 @@ results.sample_and_plot_trees(
     n=2,
     total_time=54,
     output_prefix="examples/posterior_tree_sample"
+)
+
+# Record and plot metastasis times across all posterior samples
+metastasis_times = results.get_metastasis_times(
+    total_time=54,
+    output_prefix="examples/metastasis_timing"
 )
 ```
 

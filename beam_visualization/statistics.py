@@ -1,7 +1,7 @@
 """Functions for statistical analysis of migration patterns."""
 
 import numpy as np
-from typing import Tuple, List, Optional
+from typing import Optional, Dict, List, Union, Tuple
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict

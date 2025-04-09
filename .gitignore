@@ -42,3 +42,4 @@ Thumbs.db
 examples/*.pdf
 examples/*.csv
 examples/*.txt
+examples/*.pkl

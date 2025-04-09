@@ -69,28 +69,29 @@ class BeamResults:
         """
         return list(self.log_data.columns)
     
-    def get_parameter_stats(self, parameter: str) -> Dict[str, float]:
+    def get_parameter_stats(self, parameter: str) -> Dict:
         """
-        Get summary statistics for a parameter.
+        Get statistics for a specific parameter.
         
         Args:
-            parameter: Name of the parameter to analyze
+            parameter: Name of the parameter
             
         Returns:
-            Dict[str, float]: Dictionary containing summary statistics
+            Dict: Dictionary containing parameter statistics
         """
         if parameter not in self.log_data.columns:
             raise ValueError(f"Parameter '{parameter}' not found in log file")
-            
-        return {
-            'mean': float(self.log_data[parameter].mean()),
-            'std': float(self.log_data[parameter].std()),
-            'min': float(self.log_data[parameter].min()),
-            'max': float(self.log_data[parameter].max()),
-            'median': float(self.log_data[parameter].median()),
-            'q1': float(self.log_data[parameter].quantile(0.25)),
-            'q3': float(self.log_data[parameter].quantile(0.75))
+        
+        stats = {
+            'mean': self.log_data[parameter].mean(),
+            'std': self.log_data[parameter].std(),
+            'min': self.log_data[parameter].min(),
+            'max': self.log_data[parameter].max(),
+            'median': self.log_data[parameter].median(),
+            'q1': self.log_data[parameter].quantile(0.25),
+            'q3': self.log_data[parameter].quantile(0.75)
         }
+        return stats
     
     def get_trees(self) -> dendropy.TreeList:
         """
@@ -332,7 +333,7 @@ class BeamResults:
         )
         
         # Get consensus graph if not already computed
-        if not hasattr(self, 'consensus_graph'):
+        if self.consensus_graph is None:
             self.get_consensus_graph()
         
         # Plot metastasis timing

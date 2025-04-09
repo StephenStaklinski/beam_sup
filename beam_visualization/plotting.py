@@ -2,10 +2,23 @@
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Optional, Dict, Union, List
+from typing import Optional, Dict, List, Union, Tuple
 import pandas as pd
 import networkx as nx
-from .config import DEFAULT_COLORS
+import numpy as np
+from collections import defaultdict
+from ete3 import Tree, TreeStyle, NodeStyle, TextFace, CircleFace
+import os
+import re
+from .config import (
+    DEFAULT_COLORS,
+    DEFAULT_NODE_STYLES,
+    DEFAULT_PLOT_STYLES,
+    DEFAULT_TREE_STYLE,
+    DEFAULT_FIGURE_SIZE,
+    DEFAULT_FONT_SIZE,
+    DEFAULT_MIN_PROB_THRESHOLD
+)
 
 
 def plot_parameters(data: pd.DataFrame, parameter: Optional[str] = None, output_file: Optional[str] = None) -> None:
@@ -22,9 +35,9 @@ def plot_parameters(data: pd.DataFrame, parameter: Optional[str] = None, output_
             raise ValueError(f"Parameter '{parameter}' not found in log file")
         data = data[parameter]
     
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=DEFAULT_FIGURE_SIZE)
     sns.histplot(data=data, kde=False)
-    plt.title(f"Distribution of {parameter if parameter else 'Parameters'}")
+    plt.title(f"Distribution of {parameter if parameter else 'Parameters'}", fontsize=DEFAULT_FONT_SIZE)
     plt.tight_layout()
     
     if output_file:
@@ -71,10 +84,10 @@ def plot_probability_graph(
         G.add_node(
             node,
             color=custom_colors[node],
-            shape="box",
+            shape=DEFAULT_NODE_STYLES["shape"],
             fillcolor="white",
-            penwidth=3.0,
-            fontsize=32,
+            penwidth=DEFAULT_NODE_STYLES["line_width"],
+            fontsize=DEFAULT_FONT_SIZE,
         )
     
     for edge, probability in consensus_graph.items():
@@ -83,8 +96,8 @@ def plot_probability_graph(
             source,
             target,
             color=f'"{custom_colors[source]};0.5:{custom_colors[target]}"',
-            penwidth=probability * 3,
-            fontsize=24,
+            penwidth=probability * DEFAULT_NODE_STYLES["line_width"],
+            fontsize=DEFAULT_FONT_SIZE - 8,
         )
     
     dot = nx.nx_pydot.to_pydot(G)
@@ -92,18 +105,17 @@ def plot_probability_graph(
         dot.write_pdf(output_file)
     else:
         dot.write_pdf("temp_plot.pdf")
-        plt.figure(figsize=(12, 8))
+        plt.figure(figsize=DEFAULT_FIGURE_SIZE)
         plt.imshow(plt.imread("temp_plot.pdf"))
         plt.axis('off')
         plt.tight_layout()
         plt.show()
-        import os
         os.remove("temp_plot.pdf")
 
 def plot_thresholded_graph(
     data: pd.DataFrame,
     primary_tissue: Optional[str] = None,
-    threshold: Union[float, List[float]] = 0.5,
+    threshold: Union[float, List[float]] = DEFAULT_MIN_PROB_THRESHOLD,
     output_file_prefix: Optional[str] = None,
     consensus_graph: Optional[Dict[str, float]] = None
 ) -> None:
@@ -145,10 +157,10 @@ def plot_thresholded_graph(
             G.add_node(
                 node,
                 color=custom_colors[node],
-                shape="box",
+                shape=DEFAULT_NODE_STYLES["shape"],
                 fillcolor="white",
-                penwidth=3.0,
-                fontsize=32,
+                penwidth=DEFAULT_NODE_STYLES["line_width"],
+                fontsize=DEFAULT_FONT_SIZE,
             )
         
         for edge, probability in consensus_graph.items():
@@ -161,9 +173,9 @@ def plot_thresholded_graph(
                         source,
                         target,
                         color=f'"{custom_colors[source]};0.5:{custom_colors[target]}"',
-                        penwidth=3,
+                        penwidth=DEFAULT_NODE_STYLES["line_width"],
                         label="1",
-                        fontsize=24,
+                        fontsize=DEFAULT_FONT_SIZE - 8,
                     )
         
         # Set empty label for single edges
@@ -178,12 +190,11 @@ def plot_thresholded_graph(
             dot.write_pdf(output_file)
         else:
             dot.write_pdf("temp_plot.pdf")
-            plt.figure(figsize=(12, 8))
+            plt.figure(figsize=DEFAULT_FIGURE_SIZE)
             plt.imshow(plt.imread("temp_plot.pdf"))
             plt.axis('off')
             plt.tight_layout()
             plt.show()
-            import os
             os.remove("temp_plot.pdf")
 
 def plot_sampled_tree(
@@ -203,9 +214,6 @@ def plot_sampled_tree(
         output_prefix: Prefix for output files
         tree_num: Number of this tree in the sample
     """
-    import os
-    from ete3 import Tree, TreeStyle, NodeStyle, CircleFace, TextFace
-    import re
     
     # Parse tree and get tissues
     tree = Tree(newick_str, format=1)
@@ -266,10 +274,10 @@ def plot_sampled_tree(
         G.add_node(
             node,
             color=custom_colors[node],
-            shape="box",
+            shape=DEFAULT_NODE_STYLES['shape'],
             fillcolor="white",
-            penwidth=3.0,
-            fontsize=32,
+            penwidth=DEFAULT_NODE_STYLES['line_width'],
+            fontsize=DEFAULT_FONT_SIZE,
         )
     
     for edge, count in migration_counts.items():
@@ -278,9 +286,9 @@ def plot_sampled_tree(
             source,
             target,
             color=f'"{custom_colors[source]};0.5:{custom_colors[target]}"',
-            penwidth=3,
+            penwidth=DEFAULT_NODE_STYLES['line_width'],
             label="" if count == 1 else str(count),
-            fontsize=24,
+            fontsize=DEFAULT_PLOT_STYLES['legend_fontsize'] - 8,
         )
     
     dot = nx.nx_pydot.to_pydot(G)
@@ -297,29 +305,29 @@ def plot_sampled_tree(
             metastasis_times.setdefault(migration, []).append(time)
     
     if metastasis_times:  # Only plot if we have migration events
-        fig, ax = plt.subplots(figsize=(12, 3))
+        fig, ax = plt.subplots(figsize=DEFAULT_FIGURE_SIZE)
         for migration, times in metastasis_times.items():
             source, target = migration.split("_")
             for time in times:
-                ax.plot([time, time], [0.5, 1], color=custom_colors[source], linewidth=3)
-                ax.plot([time, time], [0, 0.5], color=custom_colors[target], linewidth=3)
+                ax.plot([time, time], [0.5, 1], color=custom_colors[source], linewidth=DEFAULT_PLOT_STYLES['linewidth'])
+                ax.plot([time, time], [0, 0.5], color=custom_colors[target], linewidth=DEFAULT_PLOT_STYLES['linewidth'])
         
         ax.set_xlim(0, total_time)
         ax.set_ylim(0, 1)
-        ax.set_xlabel("Time", fontsize=18)
+        ax.set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
         ax.set_yticks([0.25, 0.75])
-        ax.set_yticklabels(["Target", "Source"], fontsize=18)
-        ax.tick_params(axis="x", labelsize=18)
+        ax.set_yticklabels(["Target", "Source"], fontsize=DEFAULT_FONT_SIZE)
+        ax.tick_params(axis="x", labelsize=DEFAULT_FONT_SIZE)
         
-        handles = [plt.Line2D([0], [0], color=color, lw=3) for color in custom_colors.values()]
+        handles = [plt.Line2D([0], [0], color=color, lw=DEFAULT_PLOT_STYLES['linewidth']) for color in custom_colors.values()]
         ax.legend(
             handles,
             custom_colors.keys(),
-            bbox_to_anchor=(1.05, 1),
+            bbox_to_anchor=DEFAULT_PLOT_STYLES['legend_position'],
             loc="upper left",
             borderaxespad=0.0,
             frameon=False,
-            fontsize=14,
+            fontsize=DEFAULT_PLOT_STYLES['legend_fontsize'] - 8,
         )
         
         plt.tight_layout()
@@ -329,28 +337,156 @@ def plot_sampled_tree(
     # Plot tree
     os.environ['QT_QPA_PLATFORM'] = 'offscreen'
     ts = TreeStyle()
-    ts.rotation = 90
-    ts.scale = 1
-    ts.show_leaf_name = True
-    ts.show_branch_length = False
-    ts.show_border = False
-    ts.show_scale = False
-    ts.mode = "r"
+    ts.rotation = DEFAULT_TREE_STYLE['rotation']
+    ts.scale = DEFAULT_TREE_STYLE['scale']
+    ts.show_leaf_name = DEFAULT_TREE_STYLE['show_leaf_name']
+    ts.show_branch_length = DEFAULT_TREE_STYLE['show_branch_length']
+    ts.show_border = DEFAULT_TREE_STYLE['show_border']
+    ts.show_scale = DEFAULT_TREE_STYLE['show_scale']
+    ts.mode = DEFAULT_TREE_STYLE['mode']
     
+    # Add legend
     for tissue in all_tissues:
-        ts.legend.add_face(CircleFace(10, custom_colors[tissue]), column=0)
-        ts.legend.add_face(TextFace(tissue, fsize=12), column=1)
+        if tissue is not None:  # Skip None tissue type
+            ts.legend.add_face(CircleFace(DEFAULT_NODE_STYLES['size'], custom_colors[tissue]), column=0)
+            ts.legend.add_face(TextFace(tissue, fsize=DEFAULT_FONT_SIZE), column=1)
     
+    # Set node styles
     for node in origin.traverse():
         nstyle = NodeStyle()
         nstyle["shape"] = "circle"
-        nstyle["size"] = 10
+        nstyle["size"] = DEFAULT_NODE_STYLES['size']
         nstyle["hz_line_color"] = custom_colors[node.tissue]
         nstyle["vt_line_color"] = custom_colors[node.tissue]
-        nstyle["hz_line_width"] = 3
-        nstyle["vt_line_width"] = 3
+        nstyle["hz_line_width"] = DEFAULT_NODE_STYLES['line_width']
+        nstyle["vt_line_width"] = DEFAULT_NODE_STYLES['line_width']
         nstyle["fgcolor"] = custom_colors[node.tissue]
         node.set_style(nstyle)
     
     origin.render(f"{output_prefix}_tree_{tree_num}.pdf", tree_style=ts)
+
+def plot_metastasis_timing(
+    met_times: Dict[str, Dict[str, Tuple[float, float]]],
+    consensus_graph: Dict[str, float],
+    origin_time: float,
+    origin_tissue: str,
+    min_prob_threshold: float = DEFAULT_MIN_PROB_THRESHOLD,
+    output_prefix: Optional[str] = None
+) -> None:
+    """
+    Plot metastasis timing distributions.
+    
+    Args:
+        met_times: Dictionary mapping tree labels to dictionaries of metastasis events
+        consensus_graph: Dictionary mapping migration patterns to their probabilities
+        origin_time: Time of origin
+        origin_tissue: Primary tissue label
+        min_prob_threshold: Minimum probability threshold for migrations to include in plots
+        output_prefix: Optional prefix for output files
+    """
+    # Convert metastasis times to DataFrame
+    df = pd.DataFrame(met_times)
+    
+    # Split the migration strings into source and target tissues
+    df.index = pd.MultiIndex.from_tuples(
+        [
+            tuple([migration.split("_")[0], "_".join(migration.split("_")[1:])])
+            for migration in df.index
+        ],
+        names=["source", "target"],
+    )
+    
+    # Get unique sources, ensuring origin_tissue is first
+    all_sources = set(df.index.get_level_values("source").unique())
+    if origin_tissue not in all_sources:
+        print(f"Warning: Origin tissue '{origin_tissue}' not found in metastasis times")
+        return
+        
+    remaining_sources = sorted(list(all_sources - {origin_tissue}))
+    remaining_sources.insert(0, origin_tissue)
+    
+    # Get unique tissues
+    target_tissues = sorted(set(df.index.get_level_values("target")))
+    target_tissues_no_num = set([tissue.split("_")[0] for tissue in target_tissues])
+    tissues = sorted(
+        set(df.index.get_level_values("source")).union(target_tissues_no_num)
+        - {origin_tissue}
+    )
+    tissues.insert(0, origin_tissue)
+    
+    # Create color palette
+    all_tissues = sorted(list(set(tissues) - {origin_tissue}))
+    custom_colors = {
+        node: color for node, color in zip(all_tissues, DEFAULT_COLORS[0:len(all_tissues)])
+    }
+    custom_colors[origin_tissue] = "black"
+    
+    # Plot probability distributions
+    fig, axes = plt.subplots(
+        len(remaining_sources),
+        1,
+        figsize=DEFAULT_FIGURE_SIZE,
+        sharex=True,
+        sharey=True,
+    )
+    
+    for i, source in enumerate(remaining_sources):
+        if len(remaining_sources) == 1:
+            ax = axes
+        else:
+            ax = axes[i]
+            
+        # Get migrations from this source
+        source_migrations = df.loc[source]
+        
+        # Plot each migration
+        for target in source_migrations.index:
+            # Get probability from consensus graph
+            migration = f"{source}_{target}"
+            prob = consensus_graph[migration]
+            
+            if prob >= min_prob_threshold:
+                # Get times for this migration
+                times = source_migrations[target].dropna()
+                
+                if len(times) > 0:
+                    # Plot histogram
+                    ax.hist(
+                        times,
+                        bins=DEFAULT_PLOT_STYLES['bins'],
+                        alpha=DEFAULT_PLOT_STYLES['alpha'],
+                        color=custom_colors[source],
+                        label=f"{target} (p={prob:.2f})",
+                        linewidth=DEFAULT_PLOT_STYLES['linewidth']
+                    )
+        
+        # Set labels and title
+        ax.set_ylabel("Count", fontsize=DEFAULT_FONT_SIZE)
+        ax.set_title(f"From {source}", fontsize=DEFAULT_FONT_SIZE)
+        ax.tick_params(axis="both", labelsize=DEFAULT_FONT_SIZE)
+        
+        # Add legend
+        ax.legend(
+            bbox_to_anchor=DEFAULT_PLOT_STYLES['legend_position'],
+            loc="upper left",
+            borderaxespad=0.0,
+            frameon=False,
+            fontsize=DEFAULT_PLOT_STYLES['legend_fontsize'],
+            title=DEFAULT_PLOT_STYLES['legend_title'],
+            title_fontsize=DEFAULT_PLOT_STYLES['legend_title_fontsize']
+        )
+    
+    # Set x-axis label
+    if len(remaining_sources) == 1:
+        axes.set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
+    else:
+        axes[-1].set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
+    
+    plt.tight_layout()
+    
+    if output_prefix:
+        plt.savefig(f"{output_prefix}_metastasis_timing.pdf")
+    else:
+        plt.show()
+    plt.close()
 
