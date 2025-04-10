@@ -33,30 +33,30 @@ DEFAULT_NUM_SAMPLES = 1
 
 # Default plot styles
 DEFAULT_PLOT_STYLES = {
-    'linewidth': 2,
-    'alpha': 0.3,
-    'bins': 100,
-    'legend_position': (1.05, 0.75),
-    'legend_title': "Target Tissue",
-    'legend_fontsize': 22,
-    'legend_title_fontsize': 22
+    "linewidth": 2,
+    "alpha": 0.3,
+    "bins": 100,
+    "legend_position": (1.05, 0.75),
+    "legend_title": "Target Tissue",
+    "legend_fontsize": 22,
+    "legend_title_fontsize": 22,
 }
 
 # Default node styles for tree visualization
 DEFAULT_NODE_STYLES = {
-    'shape': 'box',
-    'size': 10,
-    'line_width': 3,
-    'line_color': 'black'
+    "shape": "box",
+    "size": 10,
+    "line_width": 3,
+    "line_color": "black",
 }
 
 # Default tree style settings
 DEFAULT_TREE_STYLE = {
-    'rotation': 90,
-    'scale': 1,
-    'show_leaf_name': True,
-    'show_branch_length': False,
-    'show_border': False,
-    'show_scale': False,
-    'mode': 'r'
-} 
+    "rotation": 90,
+    "scale": 1,
+    "show_leaf_name": True,
+    "show_branch_length": False,
+    "show_border": False,
+    "show_scale": False,
+    "mode": "r",
+}

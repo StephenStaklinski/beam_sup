@@ -6,77 +6,82 @@ import dendropy
 from typing import Tuple, Optional
 from .config import MAX_TREES_TO_LOAD
 
+
 def load_trees_file(trees_file: str) -> dendropy.TreeList:
     """
     Load and parse a BEAM trees file.
-    
+
     Args:
         trees_file: Path to the .trees file
-        
+
     Returns:
         dendropy.TreeList: The loaded trees
     """
     if not os.path.exists(trees_file):
         raise FileNotFoundError(f"Trees file not found: {trees_file}")
-    
+
     try:
         # Try loading as NEXUS format
         trees = dendropy.TreeList.get(path=trees_file, schema="nexus")
     except Exception as e:
         try:
             # If NEXUS parsing fails, try to fix case sensitivity
-            with open(trees_file, 'r') as f:
+            with open(trees_file, "r") as f:
                 content = f.read()
-            
+
             # Replace case-sensitive NEXUS keywords
-            content = content.replace('Begin taxa', 'BEGIN TAXA')
-            content = content.replace('Dimensions', 'DIMENSIONS')
-            content = content.replace('Taxlabels', 'TAXLABELS')
-            content = content.replace('Begin trees', 'BEGIN TREES')
-            
+            content = content.replace("Begin taxa", "BEGIN TAXA")
+            content = content.replace("Dimensions", "DIMENSIONS")
+            content = content.replace("Taxlabels", "TAXLABELS")
+            content = content.replace("Begin trees", "BEGIN TREES")
+
             # Write to temporary file
-            temp_file = trees_file + '.temp'
-            with open(temp_file, 'w') as f:
+            temp_file = trees_file + ".temp"
+            with open(temp_file, "w") as f:
                 f.write(content)
-            
+
             trees = dendropy.TreeList.get(path=temp_file, schema="nexus")
             os.remove(temp_file)
         except Exception as e:
             raise ValueError(f"Failed to load trees file: {e}")
-    
+
     if len(trees) > MAX_TREES_TO_LOAD:
         trees = trees[:MAX_TREES_TO_LOAD]
-    
+
     return trees
+
 
 def load_log_file(log_file: str) -> pd.DataFrame:
     """
     Load and parse a BEAM log file.
-    
+
     Args:
         log_file: Path to the .log file
-        
+
     Returns:
         pd.DataFrame: The loaded log data
     """
     if not os.path.exists(log_file):
         raise FileNotFoundError(f"Log file not found: {log_file}")
-    
+
     try:
         log_data = pd.read_csv(log_file, sep="\t", comment="#")
     except Exception as e:
         raise ValueError(f"Failed to load log file: {e}")
-    
+
     return log_data
 
-def load_beam_files(trees_file: str, log_file: str) -> Tuple[dendropy.TreeList, pd.DataFrame]:
+
+def load_beam_files(
+    trees_file: str, log_file: str
+) -> Tuple[dendropy.TreeList, pd.DataFrame]:
     """
     Load both BEAM output files.
-    
+
     Args:
         trees_file: Path to the .trees file
         log_file: Path to the .log file
-        
+
     Returns:
         Tuple containing:
             - dendropy.TreeList: The loaded trees
@@ -84,4 +89,4 @@ def load_beam_files(trees_file: str, log_file: str) -> Tuple[dendropy.TreeList, 
     """
     trees = load_trees_file(trees_file)
     log_data = load_log_file(log_file)
-    return trees, log_data 
+    return trees, log_data

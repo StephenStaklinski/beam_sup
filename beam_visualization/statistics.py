@@ -12,17 +12,17 @@ def compute_posterior_mutual_info(
     origin_tissue: str,
     threads: int = 1,
     output_file_matrix: Optional[str] = None,
-    output_file_information: Optional[str] = None
+    output_file_information: Optional[str] = None,
 ) -> Tuple[float, np.ndarray, List[str]]:
     """Calculate mutual information from migration patterns in a set of trees.
-    
+
     Args:
         trees: Dendropy TreeList object
         origin_tissue: Name of the origin tissue
         threads: Number of threads to use for parallel processing
         output_file_matrix: Optional path to save the count matrix
         output_file_information: Optional path to save the mutual information score
-        
+
     Returns:
         Tuple containing:
             - Mutual information score
@@ -36,7 +36,7 @@ def compute_posterior_mutual_info(
     def process_tree(tree):
         counts = defaultdict(lambda: defaultdict(int))
         types = set()
-        
+
         for node in tree.preorder_node_iter():
             if node.parent_node:
                 source = node.parent_node.annotations.get_value("location")
@@ -49,7 +49,7 @@ def compute_posterior_mutual_info(
                 types.add(origin_tissue)
                 types.add(target)
                 counts[origin_tissue][target] += 1
-                
+
         return types, counts
 
     with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -81,17 +81,17 @@ def compute_posterior_mutual_info(
             if P[i, j] > 0:
                 MI += P[i, j] * np.log2(P[i, j] / (p_x[i] * p_y[j]))
 
-    H_x = -np.sum(p_x * np.log2(p_x, where=p_x>0))
-    H_y = -np.sum(p_y * np.log2(p_y, where=p_y>0))
+    H_x = -np.sum(p_x * np.log2(p_x, where=p_x > 0))
+    H_y = -np.sum(p_y * np.log2(p_y, where=p_y > 0))
     mutual_info = (2 * MI) / (H_x + H_y)
 
     # Save results if output files are provided
     if output_file_matrix:
         df = pd.DataFrame(count_matrix, index=tissue_list, columns=tissue_list)
         df.to_csv(output_file_matrix)
-        
+
     if output_file_information:
-        with open(output_file_information, 'w') as f:
+        with open(output_file_information, "w") as f:
             f.write(str(mutual_info))
 
-    return mutual_info, count_matrix, tissue_list 
+    return mutual_info, count_matrix, tissue_list

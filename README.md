@@ -9,7 +9,7 @@ You can install the package using pip:
 ```bash
 git clone https://github.com/StephenStaklinski/beam_visualization.git
 cd beam_visualization
-pip install -e ".[test]"
+pip install -e .
 ```
 
 
