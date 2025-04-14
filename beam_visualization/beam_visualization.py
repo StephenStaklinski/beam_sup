@@ -50,6 +50,7 @@ class BeamResults:
         self.total_time = total_time
         self.trees, self.log_data = data_loader.load_beam_files(trees_file, log_file)
         self.consensus_graph = None
+        self.metastasis_times = None
 
         # Validate data
         if len(self.trees) == 0:
@@ -144,6 +145,7 @@ class BeamResults:
         burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
         cores: int = config.DEFAULT_CORES,
         output_file: Optional[str] = None,
+        force_recompute: bool = False,
     ) -> Dict[str, float]:
         """
         Calculate consensus graph from migration counts in trees.
@@ -152,13 +154,16 @@ class BeamResults:
             burnin_percent: Percentage of trees to discard as burnin
             cores: Number of CPU cores to use for parallel processing
             output_file: Optional path to write the consensus graph to a file
+            force_recompute: If True, forces recalculation of consensus graph even if already computed
 
         Returns:
             Dict[str, float]: Dictionary mapping migration patterns to their probabilities
         """
-        self.consensus_graph = formatting.get_consensus_graph(
-            self.trees, self.primary_tissue, burnin_percent, cores
-        )
+        # Only compute consensus graph if not already computed or if force_recompute is True
+        if self.consensus_graph is None or force_recompute:
+            self.consensus_graph = formatting.get_consensus_graph(
+                self.trees, self.primary_tissue, burnin_percent, cores
+            )
 
         if output_file:
             self._ensure_output_dir(output_file)
@@ -301,6 +306,7 @@ class BeamResults:
         burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
         min_prob_threshold: float = 0.5,
         output_prefix: Optional[str] = None,
+        force_recompute: bool = False,
     ) -> Dict[str, Dict[str, Tuple[float, float]]]:
         """
         Calculate metastasis times for all trees in the posterior distribution.
@@ -311,6 +317,7 @@ class BeamResults:
             output_prefix: Optional prefix for output files. If provided:
                 - Metastasis times will be written to {output_prefix}.pkl
                 - Plots will be saved with the given prefix
+            force_recompute: If True, forces recalculation of metastasis times even if already computed
 
         Returns:
             Dict[str, Dict[str, Tuple[float, float]]]: Dictionary mapping tree labels to dictionaries of metastasis events.
@@ -319,14 +326,16 @@ class BeamResults:
         if output_prefix:
             self._ensure_output_dir(output_prefix)
 
-        # Get metastasis times
-        met_times = formatting.get_all_posterior_metastasis_times(
-            self.trees,
-            total_time=self.total_time,
-            primary_tissue=self.primary_tissue,
-            burnin_percent=burnin_percent,
-            output_prefix=output_prefix,
-        )
+        # Only compute metastasis times if not already computed or if force_recompute is True
+        if self.metastasis_times is None or force_recompute:
+            # Get metastasis times
+            self.metastasis_times = formatting.get_all_posterior_metastasis_times(
+                self.trees,
+                total_time=self.total_time,
+                primary_tissue=self.primary_tissue,
+                burnin_percent=burnin_percent,
+                output_prefix=output_prefix,
+            )
 
         # Get consensus graph if not already computed
         if self.consensus_graph is None:
@@ -334,7 +343,7 @@ class BeamResults:
 
         # Plot metastasis timing
         plotting.plot_metastasis_timing(
-            met_times=met_times,
+            met_times=self.metastasis_times,
             consensus_graph=self.consensus_graph,
             origin_time=self.total_time,
             origin_tissue=self.primary_tissue,
@@ -342,4 +351,4 @@ class BeamResults:
             output_prefix=output_prefix,
         )
 
-        return met_times
+        return self.metastasis_times

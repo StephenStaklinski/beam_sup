@@ -200,7 +200,7 @@ def plot_thresholded_graph(
                         color=f'"{custom_colors[source]};0.5:{custom_colors[target]}"',
                         penwidth=DEFAULT_NODE_STYLES["line_width"],
                         label="1",
-                        fontsize=DEFAULT_FONT_SIZE - 8,
+                        fontsize=DEFAULT_FONT_SIZE,
                     )
 
         # Set empty label for single edges
@@ -316,7 +316,7 @@ def plot_sampled_tree(
             color=f'"{custom_colors[source]};0.5:{custom_colors[target]}"',
             penwidth=DEFAULT_NODE_STYLES["line_width"],
             label="" if count == 1 else str(count),
-            fontsize=DEFAULT_PLOT_STYLES["legend_fontsize"] - 8,
+            fontsize=DEFAULT_PLOT_STYLES["legend_fontsize"],
         )
 
     dot = nx.nx_pydot.to_pydot(G)
@@ -332,8 +332,9 @@ def plot_sampled_tree(
             time = node.up.get_distance(origin) + (node.dist / 2)
             metastasis_times.setdefault(migration, []).append(time)
 
-    if metastasis_times:  # Only plot if we have migration events
-        fig, ax = plt.subplots(figsize=DEFAULT_FIGURE_SIZE)
+    if metastasis_times:
+        length, height = DEFAULT_FIGURE_SIZE
+        fig, ax = plt.subplots(figsize=(length, height/2))
         for migration, times in metastasis_times.items():
             source, target = migration.split("_")
             for time in times:
