@@ -1,6 +1,6 @@
 # BEAM Visualization
 
-A Python package for visualizing and analyzing BEAM (Bayesian Evolutionary Analysis by Sampling Trees) output.
+A Python package for visualizing and analyzing [BEAM (Bayesian Evolutionary Analysis of Metastasis)](https://github.com/StephenStaklinski/beam) output.
 
 ## Installation
 
@@ -77,27 +77,7 @@ metastasis_times = results.get_metastasis_times(
 )
 ```
 
-## Running Tests
-
-To run the test suite:
-
-```bash
-# Install development dependencies
-pip install -e ".[test]"
-
-# Run tests with coverage report
-pytest
-
-# Run tests without coverage report
-pytest --no-cov
-```
-The test suite includes:
-- Unit tests for all major functionality
-- Test fixtures for sample data
-- Coverage reporting
-- Error handling tests
-
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
