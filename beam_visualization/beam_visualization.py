@@ -19,7 +19,7 @@ class BeamResults:
     def _ensure_output_dir(self, filepath: Optional[str]) -> None:
         """
         Ensure the directory for the given filepath exists.
-        
+
         Args:
             filepath: Path to the file to be written
         """
@@ -29,11 +29,7 @@ class BeamResults:
                 os.makedirs(output_dir, exist_ok=True)
 
     def __init__(
-        self, 
-        trees_file: str, 
-        log_file: str, 
-        primary_tissue: str,
-        total_time: float
+        self, trees_file: str, log_file: str, primary_tissue: str, total_time: float
     ):
         """
         Initialize BeamResults with BEAM output files.
@@ -178,10 +174,7 @@ class BeamResults:
 
         return self.consensus_graph
 
-    def plot_probability_graph(
-        self, 
-        output_file: Optional[str] = None
-    ) -> None:
+    def plot_probability_graph(self, output_file: Optional[str] = None) -> None:
         """
         Plot the consensus migration graph with edge thicknesses proportional to probability.
 
@@ -304,7 +297,7 @@ class BeamResults:
     def get_metastasis_times(
         self,
         burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
-        min_prob_threshold: float = 0.5,
+        min_prob_threshold: float = config.DEFAULT_MIN_PROB_THRESHOLD,
         output_prefix: Optional[str] = None,
         force_recompute: bool = False,
     ) -> Dict[str, Dict[str, Tuple[float, float]]]:

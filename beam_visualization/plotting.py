@@ -2,7 +2,8 @@
 
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')
+
+matplotlib.use("Agg")
 import seaborn as sns
 from typing import Optional, Dict, List, Union, Tuple
 import pandas as pd
@@ -12,15 +13,8 @@ from collections import defaultdict
 from ete3 import Tree, TreeStyle, NodeStyle, TextFace, CircleFace
 import os
 import re
-from .config import (
-    DEFAULT_COLORS,
-    DEFAULT_NODE_STYLES,
-    DEFAULT_PLOT_STYLES,
-    DEFAULT_TREE_STYLE,
-    DEFAULT_FIGURE_SIZE,
-    DEFAULT_FONT_SIZE,
-    DEFAULT_MIN_PROB_THRESHOLD,
-)
+
+from . import config
 
 
 def plot_parameters(
@@ -41,11 +35,11 @@ def plot_parameters(
             raise ValueError(f"Parameter '{parameter}' not found in log file")
         data = data[parameter]
 
-    plt.figure(figsize=DEFAULT_FIGURE_SIZE)
+    plt.figure(figsize=config.DEFAULT_FIGURE_SIZE)
     sns.histplot(data=data, kde=False)
     plt.title(
         f"Distribution of {parameter if parameter else 'Parameters'}",
-        fontsize=DEFAULT_FONT_SIZE,
+        fontsize=config.DEFAULT_FONT_SIZE,
     )
     plt.tight_layout()
 
@@ -88,7 +82,7 @@ def plot_probability_graph(
     # Assign colors to tissues
     custom_colors = {
         node: color
-        for node, color in zip(all_tissues, DEFAULT_COLORS[0 : len(all_tissues)])
+        for node, color in zip(all_tissues, config.DEFAULT_COLORS[0 : len(all_tissues)])
         if node != primary_tissue
     }
     custom_colors[primary_tissue] = "black"
@@ -100,10 +94,10 @@ def plot_probability_graph(
         G.add_node(
             node,
             color=custom_colors[node],
-            shape=DEFAULT_NODE_STYLES["shape"],
+            shape=config.DEFAULT_NODE_STYLES["shape"],
             fillcolor="white",
-            penwidth=DEFAULT_NODE_STYLES["line_width"],
-            fontsize=DEFAULT_FONT_SIZE,
+            penwidth=config.DEFAULT_NODE_STYLES["line_width"],
+            fontsize=config.DEFAULT_FONT_SIZE,
         )
 
     for edge, probability in consensus_graph.items():
@@ -112,8 +106,8 @@ def plot_probability_graph(
             source,
             target,
             color=f'"{custom_colors[source]};0.5:{custom_colors[target]}"',
-            penwidth=probability * DEFAULT_NODE_STYLES["line_width"],
-            fontsize=DEFAULT_FONT_SIZE - 8,
+            penwidth=probability * config.DEFAULT_NODE_STYLES["line_width"],
+            fontsize=config.DEFAULT_FONT_SIZE - 8,
         )
 
     dot = nx.nx_pydot.to_pydot(G)
@@ -121,7 +115,7 @@ def plot_probability_graph(
         dot.write_pdf(output_file)
     else:
         dot.write_pdf("temp_plot.pdf")
-        plt.figure(figsize=DEFAULT_FIGURE_SIZE)
+        plt.figure(figsize=config.DEFAULT_FIGURE_SIZE)
         plt.imshow(plt.imread("temp_plot.pdf"))
         plt.axis("off")
         plt.tight_layout()
@@ -132,7 +126,7 @@ def plot_probability_graph(
 def plot_thresholded_graph(
     data: pd.DataFrame,
     primary_tissue: Optional[str] = None,
-    threshold: Union[float, List[float]] = DEFAULT_MIN_PROB_THRESHOLD,
+    threshold: Union[float, List[float]] = config.DEFAULT_MIN_PROB_THRESHOLD,
     output_file_prefix: Optional[str] = None,
     consensus_graph: Optional[Dict[str, float]] = None,
 ) -> None:
@@ -167,7 +161,7 @@ def plot_thresholded_graph(
     # Assign colors to tissues
     custom_colors = {
         node: color
-        for node, color in zip(all_tissues, DEFAULT_COLORS[0 : len(all_tissues)])
+        for node, color in zip(all_tissues, config.DEFAULT_COLORS[0 : len(all_tissues)])
         if node != primary_tissue
     }
     custom_colors[primary_tissue] = "black"
@@ -180,10 +174,10 @@ def plot_thresholded_graph(
             G.add_node(
                 node,
                 color=custom_colors[node],
-                shape=DEFAULT_NODE_STYLES["shape"],
+                shape=config.DEFAULT_NODE_STYLES["shape"],
                 fillcolor="white",
-                penwidth=DEFAULT_NODE_STYLES["line_width"],
-                fontsize=DEFAULT_FONT_SIZE,
+                penwidth=config.DEFAULT_NODE_STYLES["line_width"],
+                fontsize=config.DEFAULT_FONT_SIZE,
             )
 
         for edge, probability in consensus_graph.items():
@@ -198,9 +192,9 @@ def plot_thresholded_graph(
                         source,
                         target,
                         color=f'"{custom_colors[source]};0.5:{custom_colors[target]}"',
-                        penwidth=DEFAULT_NODE_STYLES["line_width"],
+                        penwidth=config.DEFAULT_NODE_STYLES["line_width"],
                         label="1",
-                        fontsize=DEFAULT_FONT_SIZE,
+                        fontsize=config.DEFAULT_FONT_SIZE,
                     )
 
         # Set empty label for single edges
@@ -215,7 +209,7 @@ def plot_thresholded_graph(
             dot.write_pdf(output_file)
         else:
             dot.write_pdf("temp_plot.pdf")
-            plt.figure(figsize=DEFAULT_FIGURE_SIZE)
+            plt.figure(figsize=config.DEFAULT_FIGURE_SIZE)
             plt.imshow(plt.imread("temp_plot.pdf"))
             plt.axis("off")
             plt.tight_layout()
@@ -289,7 +283,7 @@ def plot_sampled_tree(
     all_tissues = sorted(list(all_tissues - {primary_tissue}))
     custom_colors = {
         node: color
-        for node, color in zip(all_tissues, DEFAULT_COLORS[0 : len(all_tissues)])
+        for node, color in zip(all_tissues, config.DEFAULT_COLORS[0 : len(all_tissues)])
         if node != primary_tissue
     }
     all_tissues = [primary_tissue] + all_tissues
@@ -302,10 +296,10 @@ def plot_sampled_tree(
         G.add_node(
             node,
             color=custom_colors[node],
-            shape=DEFAULT_NODE_STYLES["shape"],
+            shape=config.DEFAULT_NODE_STYLES["shape"],
             fillcolor="white",
-            penwidth=DEFAULT_NODE_STYLES["line_width"],
-            fontsize=DEFAULT_FONT_SIZE,
+            penwidth=config.DEFAULT_NODE_STYLES["line_width"],
+            fontsize=config.DEFAULT_FONT_SIZE,
         )
 
     for edge, count in migration_counts.items():
@@ -314,9 +308,9 @@ def plot_sampled_tree(
             source,
             target,
             color=f'"{custom_colors[source]};0.5:{custom_colors[target]}"',
-            penwidth=DEFAULT_NODE_STYLES["line_width"],
+            penwidth=config.DEFAULT_NODE_STYLES["line_width"],
             label="" if count == 1 else str(count),
-            fontsize=DEFAULT_PLOT_STYLES["legend_fontsize"],
+            fontsize=config.DEFAULT_PLOT_STYLES["legend_fontsize"],
         )
 
     dot = nx.nx_pydot.to_pydot(G)
@@ -333,8 +327,8 @@ def plot_sampled_tree(
             metastasis_times.setdefault(migration, []).append(time)
 
     if metastasis_times:
-        length, height = DEFAULT_FIGURE_SIZE
-        fig, ax = plt.subplots(figsize=(length, height/2))
+        length, height = config.DEFAULT_FIGURE_SIZE
+        fig, ax = plt.subplots(figsize=(length, height / 2))
         for migration, times in metastasis_times.items():
             source, target = migration.split("_")
             for time in times:
@@ -342,34 +336,36 @@ def plot_sampled_tree(
                     [time, time],
                     [0.5, 1],
                     color=custom_colors[source],
-                    linewidth=DEFAULT_PLOT_STYLES["linewidth"],
+                    linewidth=config.DEFAULT_PLOT_STYLES["linewidth"],
                 )
                 ax.plot(
                     [time, time],
                     [0, 0.5],
                     color=custom_colors[target],
-                    linewidth=DEFAULT_PLOT_STYLES["linewidth"],
+                    linewidth=config.DEFAULT_PLOT_STYLES["linewidth"],
                 )
 
         ax.set_xlim(0, total_time)
         ax.set_ylim(0, 1)
-        ax.set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
+        ax.set_xlabel("Time", fontsize=config.DEFAULT_FONT_SIZE)
         ax.set_yticks([0.25, 0.75])
-        ax.set_yticklabels(["Target", "Source"], fontsize=DEFAULT_FONT_SIZE)
-        ax.tick_params(axis="x", labelsize=DEFAULT_FONT_SIZE)
+        ax.set_yticklabels(["Target", "Source"], fontsize=config.DEFAULT_FONT_SIZE)
+        ax.tick_params(axis="x", labelsize=config.DEFAULT_FONT_SIZE)
 
         handles = [
-            plt.Line2D([0], [0], color=color, lw=DEFAULT_PLOT_STYLES["linewidth"])
+            plt.Line2D(
+                [0], [0], color=color, lw=config.DEFAULT_PLOT_STYLES["linewidth"]
+            )
             for color in custom_colors.values()
         ]
         ax.legend(
             handles,
             custom_colors.keys(),
-            bbox_to_anchor=DEFAULT_PLOT_STYLES["legend_position"],
+            bbox_to_anchor=config.DEFAULT_PLOT_STYLES["legend_position"],
             loc="upper left",
             borderaxespad=0.0,
             frameon=False,
-            fontsize=DEFAULT_PLOT_STYLES["legend_fontsize"] - 8,
+            fontsize=config.DEFAULT_PLOT_STYLES["legend_fontsize"] - 8,
         )
 
         plt.tight_layout()
@@ -379,31 +375,34 @@ def plot_sampled_tree(
     # Plot tree
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     ts = TreeStyle()
-    ts.rotation = DEFAULT_TREE_STYLE["rotation"]
-    ts.scale = DEFAULT_TREE_STYLE["scale"]
-    ts.show_leaf_name = DEFAULT_TREE_STYLE["show_leaf_name"]
-    ts.show_branch_length = DEFAULT_TREE_STYLE["show_branch_length"]
-    ts.show_border = DEFAULT_TREE_STYLE["show_border"]
-    ts.show_scale = DEFAULT_TREE_STYLE["show_scale"]
-    ts.mode = DEFAULT_TREE_STYLE["mode"]
+    ts.rotation = config.DEFAULT_TREE_STYLE["rotation"]
+    ts.scale = config.DEFAULT_TREE_STYLE["scale"]
+    ts.show_leaf_name = config.DEFAULT_TREE_STYLE["show_leaf_name"]
+    ts.show_branch_length = config.DEFAULT_TREE_STYLE["show_branch_length"]
+    ts.show_border = config.DEFAULT_TREE_STYLE["show_border"]
+    ts.show_scale = config.DEFAULT_TREE_STYLE["show_scale"]
+    ts.mode = config.DEFAULT_TREE_STYLE["mode"]
 
     # Add legend
     for tissue in all_tissues:
         if tissue is not None:  # Skip None tissue type
             ts.legend.add_face(
-                CircleFace(DEFAULT_NODE_STYLES["size"], custom_colors[tissue]), column=0
+                CircleFace(config.DEFAULT_NODE_STYLES["size"], custom_colors[tissue]),
+                column=0,
             )
-            ts.legend.add_face(TextFace(tissue, fsize=DEFAULT_FONT_SIZE), column=1)
+            ts.legend.add_face(
+                TextFace(tissue, fsize=config.DEFAULT_FONT_SIZE), column=1
+            )
 
     # Set node styles
     for node in origin.traverse():
         nstyle = NodeStyle()
         nstyle["shape"] = "circle"
-        nstyle["size"] = DEFAULT_NODE_STYLES["size"]
+        nstyle["size"] = config.DEFAULT_NODE_STYLES["size"]
         nstyle["hz_line_color"] = custom_colors[node.tissue]
         nstyle["vt_line_color"] = custom_colors[node.tissue]
-        nstyle["hz_line_width"] = DEFAULT_NODE_STYLES["line_width"]
-        nstyle["vt_line_width"] = DEFAULT_NODE_STYLES["line_width"]
+        nstyle["hz_line_width"] = config.DEFAULT_NODE_STYLES["line_width"]
+        nstyle["vt_line_width"] = config.DEFAULT_NODE_STYLES["line_width"]
         nstyle["fgcolor"] = custom_colors[node.tissue]
         node.set_style(nstyle)
 
@@ -415,7 +414,7 @@ def plot_metastasis_timing(
     consensus_graph: Dict[str, float],
     origin_time: float,
     origin_tissue: str,
-    min_prob_threshold: float = DEFAULT_MIN_PROB_THRESHOLD,
+    min_prob_threshold: float = config.DEFAULT_MIN_PROB_THRESHOLD,
     output_prefix: Optional[str] = None,
 ) -> None:
     """
@@ -429,7 +428,7 @@ def plot_metastasis_timing(
         min_prob_threshold: Minimum probability threshold for migrations to include in plots
         output_prefix: Optional prefix for output files
     """
-    
+
     allowable_migrations = set()
     for migration, prob in consensus_graph.items():
         if float(prob) >= min_prob_threshold:
@@ -450,7 +449,7 @@ def plot_metastasis_timing(
             migration_counts_mid_points[migration].append((start_range + end_range) / 2)
 
     df = pd.DataFrame(migration_counts, index=np.arange(0, origin_time + 1)).T
-    
+
     # Split the migration strings into source and target tissues
     df.index = pd.MultiIndex.from_tuples(
         [
@@ -476,9 +475,10 @@ def plot_metastasis_timing(
 
     # Create a color palette for the tissues
     all_tissues = sorted(list(set(tissues) - {origin_tissue}))
-    custom_colors = DEFAULT_COLORS
+    custom_colors = config.DEFAULT_COLORS
     custom_colors = {
-        node: color for node, color in zip(all_tissues, custom_colors[0 : len(all_tissues)])
+        node: color
+        for node, color in zip(all_tissues, custom_colors[0 : len(all_tissues)])
     }
     custom_colors[origin_tissue] = "black"
 
@@ -518,15 +518,16 @@ def plot_metastasis_timing(
                     color=custom_colors[target_name],
                 )
 
-        ax.set_ylabel(source, fontsize=DEFAULT_FONT_SIZE)
-        ax.tick_params(axis="both", which="major", labelsize=DEFAULT_FONT_SIZE)
+        ax.set_ylabel(source, fontsize=config.DEFAULT_FONT_SIZE)
+        ax.tick_params(axis="both", which="major", labelsize=config.DEFAULT_FONT_SIZE)
         # ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
         if i == len(remaining_sources) - 1:
-            ax.set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
+            ax.set_xlabel("Time", fontsize=config.DEFAULT_FONT_SIZE)
 
     # Create a single legend for all axes
     handles = [
-        plt.Line2D([0], [0], color=color, lw=2) for tissue, color in custom_colors.items()
+        plt.Line2D([0], [0], color=color, lw=2)
+        for tissue, color in custom_colors.items()
     ]
     labels = list(custom_colors.keys())
     fig.legend(
@@ -535,8 +536,8 @@ def plot_metastasis_timing(
         bbox_to_anchor=(1.05, 0.75),
         title="Target Tissue",
         frameon=False,
-        fontsize=DEFAULT_FONT_SIZE,
-        title_fontsize=DEFAULT_FONT_SIZE,
+        fontsize=config.DEFAULT_FONT_SIZE,
+        title_fontsize=config.DEFAULT_FONT_SIZE,
     )
 
     fig.text(
@@ -546,16 +547,15 @@ def plot_metastasis_timing(
         va="center",
         ha="center",
         rotation="vertical",
-        fontsize=DEFAULT_FONT_SIZE,
+        fontsize=config.DEFAULT_FONT_SIZE,
     )
 
     plt.tight_layout(rect=[0.02, 0, 0.88, 1])
     if output_prefix:
-        plt.savefig(f"{output_prefix}_metastasis_timing_prob.pdf", bbox_inches='tight')
+        plt.savefig(f"{output_prefix}_metastasis_timing_prob.pdf", bbox_inches="tight")
     else:
         plt.show()
     plt.close()
-
 
     # plot midpoints
     fig, axes = plt.subplots(
@@ -585,10 +585,10 @@ def plot_metastasis_timing(
                     alpha=0.6,
                     label=target_reformatted,
                 )
-        ax.set_ylabel(source, fontsize=DEFAULT_FONT_SIZE)
-        ax.tick_params(axis="both", which="major", labelsize=DEFAULT_FONT_SIZE)
+        ax.set_ylabel(source, fontsize=config.DEFAULT_FONT_SIZE)
+        ax.tick_params(axis="both", which="major", labelsize=config.DEFAULT_FONT_SIZE)
         if i == len(remaining_sources) - 1:
-            ax.set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
+            ax.set_xlabel("Time", fontsize=config.DEFAULT_FONT_SIZE)
 
     fig.legend(
         handles,
@@ -596,8 +596,8 @@ def plot_metastasis_timing(
         bbox_to_anchor=(1.05, 0.75),
         title="Target Tissue",
         frameon=False,
-        fontsize=DEFAULT_FONT_SIZE,
-        title_fontsize=DEFAULT_FONT_SIZE,
+        fontsize=config.DEFAULT_FONT_SIZE,
+        title_fontsize=config.DEFAULT_FONT_SIZE,
     )
     fig.text(
         0.001,
@@ -606,13 +606,15 @@ def plot_metastasis_timing(
         va="center",
         ha="center",
         rotation="vertical",
-        fontsize=DEFAULT_FONT_SIZE,
+        fontsize=config.DEFAULT_FONT_SIZE,
     )
 
     plt.tight_layout()
 
     if output_prefix:
-        plt.savefig(f"{output_prefix}_metastasis_timing_midpoints.pdf", bbox_inches='tight')
+        plt.savefig(
+            f"{output_prefix}_metastasis_timing_midpoints.pdf", bbox_inches="tight"
+        )
     else:
         plt.show()
     plt.close()

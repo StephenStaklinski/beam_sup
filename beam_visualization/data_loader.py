@@ -4,7 +4,6 @@ import os
 import pandas as pd
 import dendropy
 from typing import Tuple, Optional
-from .config import MAX_TREES_TO_LOAD
 
 
 def load_trees_file(trees_file: str) -> dendropy.TreeList:
@@ -44,9 +43,6 @@ def load_trees_file(trees_file: str) -> dendropy.TreeList:
             os.remove(temp_file)
         except Exception as e:
             raise ValueError(f"Failed to load trees file: {e}")
-
-    if len(trees) > MAX_TREES_TO_LOAD:
-        trees = trees[:MAX_TREES_TO_LOAD]
 
     return trees
 

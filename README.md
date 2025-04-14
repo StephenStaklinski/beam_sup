@@ -33,7 +33,9 @@ results.info()
 parameters = results.get_parameters()
 
 # Get statistics for a parameter
-results.get_parameter_stats(parameters[10])
+results.get_parameter_stats(
+    parameters[10]
+    )
 
 # Plot parameter distributions
 results.plot_parameters(
@@ -46,8 +48,12 @@ results.get_consensus_graph(
     output_file = "examples/output/probability_graph.csv"
     )
 
-# Plot consensus graph
-results.plot_probability_graph(output_file="examples/output/probability_graph.pdf")
+# Plot consensus graph with probability weighted edges
+results.plot_probability_graph(
+    output_file="examples/output/probability_graph.pdf"
+    )
+
+# Plot consensus graph with edges above threshold included
 results.plot_thresholded_graph(
     threshold=[0.5, 0.75, 0.90], 
     output_file_prefix="examples/output/thresholded_graph"

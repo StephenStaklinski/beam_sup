@@ -10,7 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import defaultdict
-from .config import DEFAULT_BURNIN_PERCENT, DEFAULT_CORES, DEFAULT_NUM_SAMPLES
+
+from . import config
 
 
 def _process_tree_for_consensus(tree, primary_tissue):
@@ -57,8 +58,8 @@ def _process_tree_wrapper(args):
 def get_consensus_graph(
     trees: dendropy.TreeList,
     primary_tissue: str,
-    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
-    cores: int = DEFAULT_CORES,
+    burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
+    cores: int = config.DEFAULT_CORES,
 ) -> Dict[str, float]:
     """
     Calculate consensus graph from migration counts in trees.
@@ -66,8 +67,8 @@ def get_consensus_graph(
     Args:
         trees (dendropy.TreeList): The trees to analyze
         primary_tissue (str): Primary tissue label for migration analysis
-        burnin_percent (float): Percentage of trees to discard as burnin. Default is 0.0 (no burnin).
-        cores (int): Number of CPU cores to use for parallel processing. Default is 1 (single core).
+        burnin_percent (float): Percentage of trees to discard as burnin. config.DEFAULT is 0.0 (no burnin).
+        cores (int): Number of CPU cores to use for parallel processing. config.DEFAULT is 1 (single core).
 
     Returns:
         Dict[str, float]: Dictionary mapping migration patterns to their probabilities.
@@ -104,8 +105,8 @@ def get_consensus_graph(
 
 def sample_trees(
     trees: dendropy.TreeList,
-    n: int = DEFAULT_NUM_SAMPLES,
-    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
+    n: int = config.DEFAULT_NUM_SAMPLES,
+    burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
     output_prefix: Optional[str] = None,
 ) -> List[str]:
     """
@@ -171,7 +172,7 @@ def get_all_posterior_metastasis_times(
     trees: dendropy.TreeList,
     total_time: float,
     primary_tissue: Optional[str] = None,
-    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
+    burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
     output_prefix: Optional[str] = None,
 ) -> Dict[str, Dict[str, Tuple[float, float]]]:
     """
