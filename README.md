@@ -22,7 +22,8 @@ import beam_visualization
 results = beam_visualization.BeamResults(
     "examples/data/example.trees", 
     "examples/data/example.log", 
-    primary_tissue="LL"
+    primary_tissue="LL",
+    total_time=54
     )
 
 # Get information about the loaded data
@@ -61,13 +62,11 @@ results.compute_posterior_mutual_info(
 # Sample and plot individual posterior tree samples as tree, graph, and timing plots
 results.sample_and_plot_trees(
     n=2,
-    total_time=54,
     output_prefix="examples/output/posterior_tree_sample"
 )
 
 # Record and plot metastasis times across all posterior samples
 metastasis_times = results.get_metastasis_times(
-    total_time=54,
     output_prefix="examples/output/metastasis_timing"
 )
 ```

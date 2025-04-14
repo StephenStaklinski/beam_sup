@@ -29,7 +29,11 @@ class BeamResults:
                 os.makedirs(output_dir, exist_ok=True)
 
     def __init__(
-        self, trees_file: str, log_file: str, primary_tissue: Optional[str] = None
+        self, 
+        trees_file: str, 
+        log_file: str, 
+        primary_tissue: str,
+        total_time: float
     ):
         """
         Initialize BeamResults with BEAM output files.
@@ -38,10 +42,12 @@ class BeamResults:
             trees_file: Path to the .trees file
             log_file: Path to the .log file
             primary_tissue: Primary tissue label for migration analysis
+            total_time: Total time of the experiment
         """
         self.trees_file = trees_file
         self.log_file = log_file
         self.primary_tissue = primary_tissue
+        self.total_time = total_time
         self.trees, self.log_data = data_loader.load_beam_files(trees_file, log_file)
         self.consensus_graph = None
 
@@ -58,6 +64,7 @@ class BeamResults:
         print(f"Trees file: {self.trees_file}")
         print(f"Log file: {self.log_file}")
         print(f"Primary tissue: {self.primary_tissue}")
+        print(f"Total time: {self.total_time}")
         print(f"\nTrees:")
         print(f"  Number of trees: {len(self.trees)}")
         print(f"  Taxa: {', '.join(self.trees.taxon_namespace.labels())}")
@@ -134,7 +141,6 @@ class BeamResults:
 
     def get_consensus_graph(
         self,
-        primary_tissue: Optional[str] = None,
         burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
         cores: int = config.DEFAULT_CORES,
         output_file: Optional[str] = None,
@@ -143,7 +149,6 @@ class BeamResults:
         Calculate consensus graph from migration counts in trees.
 
         Args:
-            primary_tissue: Primary tissue label for migration analysis
             burnin_percent: Percentage of trees to discard as burnin
             cores: Number of CPU cores to use for parallel processing
             output_file: Optional path to write the consensus graph to a file
@@ -152,7 +157,7 @@ class BeamResults:
             Dict[str, float]: Dictionary mapping migration patterns to their probabilities
         """
         self.consensus_graph = formatting.get_consensus_graph(
-            self.trees, primary_tissue or self.primary_tissue, burnin_percent, cores
+            self.trees, self.primary_tissue, burnin_percent, cores
         )
 
         if output_file:
@@ -170,36 +175,24 @@ class BeamResults:
 
     def plot_probability_graph(
         self, 
-        output_file: Optional[str] = None, 
-        primary_tissue: Optional[str] = None
+        output_file: Optional[str] = None
     ) -> None:
         """
         Plot the consensus migration graph with edge thicknesses proportional to probability.
 
         Args:
             output_file: Optional path to save the plot. If None, displays the plot.
-            primary_tissue: Primary tissue label for migration analysis. If None, uses the primary_tissue from initialization.
-
-        Raises:
-            ValueError: If primary_tissue is not provided either here or during initialization
         """
-        if primary_tissue is None and self.primary_tissue is None:
-            raise ValueError(
-                "Primary tissue must be provided either during initialization or when calling plot_probability_graph"
-            )
-
         if self.consensus_graph is None:
             # Compute consensus graph if not already available
-            self.get_consensus_graph(
-                primary_tissue=primary_tissue or self.primary_tissue
-            )
+            self.get_consensus_graph()
 
         if output_file:
             self._ensure_output_dir(output_file)
 
         plotting.plot_probability_graph(
             data=self.log_data,
-            primary_tissue=primary_tissue or self.primary_tissue,
+            primary_tissue=self.primary_tissue,
             output_file=output_file,
             consensus_graph=self.consensus_graph,
         )
@@ -208,7 +201,6 @@ class BeamResults:
         self,
         threshold: Union[float, List[float]] = 0.5,
         output_file_prefix: Optional[str] = None,
-        primary_tissue: Optional[str] = None,
     ) -> None:
         """
         Plot the thresholded consensus migration graph with collapsed multiedges.
@@ -217,28 +209,17 @@ class BeamResults:
             threshold: Single threshold value or list of thresholds for filtering edges
             output_file_prefix: Optional prefix for output files. If None, displays the plot(s).
                               For multiple thresholds, each file will be named {prefix}_{threshold}.pdf
-            primary_tissue: Primary tissue label for migration analysis. If None, uses the primary_tissue from initialization.
-
-        Raises:
-            ValueError: If primary_tissue is not provided either here or during initialization
         """
-        if primary_tissue is None and self.primary_tissue is None:
-            raise ValueError(
-                "Primary tissue must be provided either during initialization or when calling plot_thresholded_graph"
-            )
-
         if self.consensus_graph is None:
             # Compute consensus graph if not already available
-            self.get_consensus_graph(
-                primary_tissue=primary_tissue or self.primary_tissue
-            )
+            self.get_consensus_graph()
 
         if output_file_prefix:
             self._ensure_output_dir(output_file_prefix)
 
         plotting.plot_thresholded_graph(
             data=self.log_data,
-            primary_tissue=primary_tissue or self.primary_tissue,
+            primary_tissue=self.primary_tissue,
             threshold=threshold,
             output_file_prefix=output_file_prefix,
             consensus_graph=self.consensus_graph,
@@ -262,15 +243,7 @@ class BeamResults:
                 - Mutual information score
                 - Count matrix as numpy array
                 - List of tissue names in order
-
-        Raises:
-            ValueError: If primary_tissue is not set
         """
-        if self.primary_tissue is None:
-            raise ValueError(
-                "Primary tissue must be set before computing mutual information"
-            )
-
         if self.trees is None:
             raise ValueError("Trees must be loaded before computing mutual information")
 
@@ -290,7 +263,6 @@ class BeamResults:
     def sample_and_plot_trees(
         self,
         n: int = 1,
-        total_time: float = 1.0,
         output_prefix: Optional[str] = None,
         burnin_percent: float = 0.1,
     ) -> None:
@@ -299,16 +271,9 @@ class BeamResults:
 
         Args:
             n: Number of trees to sample
-            total_time: Total time of the tree
             output_prefix: Optional prefix for output files. If None, plots are displayed instead of saved.
             burnin_percent: Percentage of trees to discard as burnin
-
-        Raises:
-            ValueError: If primary_tissue is not set
         """
-        if self.primary_tissue is None:
-            raise ValueError("Primary tissue must be set before plotting sampled trees")
-
         if self.trees is None:
             raise ValueError("Trees must be loaded before plotting sampled trees")
 
@@ -326,15 +291,13 @@ class BeamResults:
                 plotting.plot_sampled_tree(
                     newick_str=tree,
                     primary_tissue=self.primary_tissue,
-                    total_time=total_time,
+                    total_time=self.total_time,
                     output_prefix=output_prefix,
                     tree_num=i,
                 )
 
     def get_metastasis_times(
         self,
-        total_time: float,
-        primary_tissue: Optional[str] = None,
         burnin_percent: float = 0.1,
         min_prob_threshold: float = 0.5,
         output_prefix: Optional[str] = None,
@@ -343,8 +306,6 @@ class BeamResults:
         Calculate metastasis times for all trees in the posterior distribution.
 
         Args:
-            total_time: Total time of the experiment
-            primary_tissue: Optional tissue label for the primary site. If not provided, uses the global primary_tissue.
             burnin_percent: Percentage of trees to discard as burnin
             min_prob_threshold: Minimum probability threshold for migrations to include in plots
             output_prefix: Optional prefix for output files. If provided:
@@ -355,21 +316,14 @@ class BeamResults:
             Dict[str, Dict[str, Tuple[float, float]]]: Dictionary mapping tree labels to dictionaries of metastasis events.
             Each metastasis event is a tuple of (start_time, end_time) for the migration.
         """
-
-        if primary_tissue is None:
-            if self.primary_tissue is None:
-                raise ValueError("Primary tissue must be provided")
-            else:
-                primary_tissue = self.primary_tissue
-
         if output_prefix:
             self._ensure_output_dir(output_prefix)
 
         # Get metastasis times
         met_times = formatting.get_all_posterior_metastasis_times(
             self.trees,
-            total_time=total_time,
-            primary_tissue=primary_tissue,
+            total_time=self.total_time,
+            primary_tissue=self.primary_tissue,
             burnin_percent=burnin_percent,
             output_prefix=output_prefix,
         )
@@ -382,10 +336,8 @@ class BeamResults:
         plotting.plot_metastasis_timing(
             met_times=met_times,
             consensus_graph=self.consensus_graph,
-            origin_time=total_time,
-            origin_tissue=(
-                primary_tissue if primary_tissue is not None else self.primary_tissue
-            ),
+            origin_time=self.total_time,
+            origin_tissue=self.primary_tissue,
             min_prob_threshold=min_prob_threshold,
             output_prefix=output_prefix,
         )
