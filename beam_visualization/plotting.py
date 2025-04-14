@@ -19,16 +19,16 @@ from . import config
 
 def plot_parameters(
     data: pd.DataFrame,
+    output_file: str,
     parameter: Optional[str] = None,
-    output_file: Optional[str] = None,
 ) -> None:
     """
     Plot parameter distributions from the log file.
 
     Args:
         data (pd.DataFrame): The log data
+        output_file (str): Path to save the plot.
         parameter (str, optional): Specific parameter to plot. If None, plots all parameters.
-        output_file (str, optional): Path to save the plot. If None, displays the plot.
     """
     if parameter:
         if parameter not in data.columns:
@@ -43,17 +43,14 @@ def plot_parameters(
     )
     plt.tight_layout()
 
-    if output_file:
-        plt.savefig(output_file)
-        plt.close()
-    else:
-        plt.show()
+    plt.savefig(output_file)
+    plt.close()
 
 
 def plot_probability_graph(
     data: pd.DataFrame,
+    output_file: str,
     primary_tissue: Optional[str] = None,
-    output_file: Optional[str] = None,
     consensus_graph: Optional[Dict[str, float]] = None,
 ) -> None:
     """
@@ -61,8 +58,8 @@ def plot_probability_graph(
 
     Args:
         data: DataFrame containing the log data
+        output_file: Path to save the plot
         primary_tissue: Primary tissue label for migration analysis
-        output_file: Optional path to save the plot. If None, displays the plot.
         consensus_graph: Pre-computed consensus graph
     """
     # Find all tissues to set the node colors
@@ -111,23 +108,14 @@ def plot_probability_graph(
         )
 
     dot = nx.nx_pydot.to_pydot(G)
-    if output_file:
-        dot.write_pdf(output_file)
-    else:
-        dot.write_pdf("temp_plot.pdf")
-        plt.figure(figsize=config.DEFAULT_FIGURE_SIZE)
-        plt.imshow(plt.imread("temp_plot.pdf"))
-        plt.axis("off")
-        plt.tight_layout()
-        plt.show()
-        os.remove("temp_plot.pdf")
+    dot.write_pdf(output_file)
 
 
 def plot_thresholded_graph(
     data: pd.DataFrame,
+    output_file_prefix: str,
     primary_tissue: Optional[str] = None,
     threshold: Union[float, List[float]] = config.DEFAULT_MIN_PROB_THRESHOLD,
-    output_file_prefix: Optional[str] = None,
     consensus_graph: Optional[Dict[str, float]] = None,
 ) -> None:
     """
@@ -135,10 +123,9 @@ def plot_thresholded_graph(
 
     Args:
         data: DataFrame containing the log data
+        output_file_prefix: Prefix for output files. Each file will be named {prefix}_{threshold}.pdf
         primary_tissue: Primary tissue label for migration analysis
         threshold: Single threshold value or list of thresholds for filtering edges
-        output_file_prefix: Optional prefix for output files. If None, displays the plot.
-                           For multiple thresholds, each file will be named {prefix}_{threshold}.pdf
         consensus_graph: Pre-computed consensus graph
     """
     # Convert single threshold to list for uniform handling
@@ -203,18 +190,9 @@ def plot_thresholded_graph(
                 data["label"] = ""
 
         dot = nx.nx_pydot.to_pydot(G)
-        if output_file_prefix:
-            out_threshold = str(int(current_threshold * 100))
-            output_file = f"{output_file_prefix}_{out_threshold}.pdf"
-            dot.write_pdf(output_file)
-        else:
-            dot.write_pdf("temp_plot.pdf")
-            plt.figure(figsize=config.DEFAULT_FIGURE_SIZE)
-            plt.imshow(plt.imread("temp_plot.pdf"))
-            plt.axis("off")
-            plt.tight_layout()
-            plt.show()
-            os.remove("temp_plot.pdf")
+        out_threshold = str(int(current_threshold * 100))
+        output_file = f"{output_file_prefix}_{out_threshold}.pdf"
+        dot.write_pdf(output_file)
 
 
 def plot_sampled_tree(
@@ -414,8 +392,8 @@ def plot_metastasis_timing(
     consensus_graph: Dict[str, float],
     origin_time: float,
     origin_tissue: str,
+    output_prefix: str,
     min_prob_threshold: float = config.DEFAULT_MIN_PROB_THRESHOLD,
-    output_prefix: Optional[str] = None,
 ) -> None:
     """
     Plot metastasis timing distributions.
@@ -425,8 +403,8 @@ def plot_metastasis_timing(
         consensus_graph: Dictionary mapping migration patterns to their probabilities
         origin_time: Time of origin
         origin_tissue: Primary tissue label
+        output_prefix: Prefix for output files
         min_prob_threshold: Minimum probability threshold for migrations to include in plots
-        output_prefix: Optional prefix for output files
     """
 
     allowable_migrations = set()
@@ -551,10 +529,7 @@ def plot_metastasis_timing(
     )
 
     plt.tight_layout(rect=[0.02, 0, 0.88, 1])
-    if output_prefix:
-        plt.savefig(f"{output_prefix}_metastasis_timing_prob.pdf", bbox_inches="tight")
-    else:
-        plt.show()
+    plt.savefig(f"{output_prefix}_metastasis_timing_prob.pdf", bbox_inches="tight")
     plt.close()
 
     # plot midpoints
@@ -610,11 +585,5 @@ def plot_metastasis_timing(
     )
 
     plt.tight_layout()
-
-    if output_prefix:
-        plt.savefig(
-            f"{output_prefix}_metastasis_timing_midpoints.pdf", bbox_inches="tight"
-        )
-    else:
-        plt.show()
+    plt.savefig(f"{output_prefix}_metastasis_timing_midpoints.pdf", bbox_inches="tight")
     plt.close()

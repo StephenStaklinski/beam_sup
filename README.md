@@ -39,7 +39,7 @@ results.get_parameter_stats(
 
 # Plot parameter distributions
 results.plot_parameters(
-    parameters[10], 
+    parameter = parameters[10], 
     output_file = "examples/output/param.pdf"
     )
 

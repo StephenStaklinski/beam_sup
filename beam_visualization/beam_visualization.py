@@ -121,20 +121,17 @@ class BeamResults:
         return self.trees
 
     def plot_parameters(
-        self, parameter: Optional[str] = None, output_file: Optional[str] = None
+        self, output_file: str, parameter: Optional[str] = None
     ) -> None:
         """
         Plot parameter distributions from the log file.
 
         Args:
+            output_file: Path to save the plot.
             parameter: Specific parameter to plot. If None, plots all parameters.
-            output_file: Path to save the plot. If None, displays the plot.
         """
-
-        if output_file:
-            self._ensure_output_dir(output_file)
-
-        plotting.plot_parameters(self.log_data, parameter, output_file)
+        self._ensure_output_dir(output_file)
+        plotting.plot_parameters(self.log_data, output_file, parameter)
 
     def get_consensus_graph(
         self,
@@ -174,52 +171,49 @@ class BeamResults:
 
         return self.consensus_graph
 
-    def plot_probability_graph(self, output_file: Optional[str] = None) -> None:
+    def plot_probability_graph(self, output_file: str) -> None:
         """
         Plot the consensus migration graph with edge thicknesses proportional to probability.
 
         Args:
-            output_file: Optional path to save the plot. If None, displays the plot.
+            output_file: Path to save the plot.
         """
         if self.consensus_graph is None:
             # Compute consensus graph if not already available
             self.get_consensus_graph()
 
-        if output_file:
-            self._ensure_output_dir(output_file)
+        self._ensure_output_dir(output_file)
 
         plotting.plot_probability_graph(
             data=self.log_data,
-            primary_tissue=self.primary_tissue,
             output_file=output_file,
+            primary_tissue=self.primary_tissue,
             consensus_graph=self.consensus_graph,
         )
 
     def plot_thresholded_graph(
         self,
+        output_file_prefix: str,
         threshold: Union[float, List[float]] = 0.5,
-        output_file_prefix: Optional[str] = None,
     ) -> None:
         """
         Plot the thresholded consensus migration graph with collapsed multiedges.
 
         Args:
+            output_file_prefix: Prefix for output files. Each file will be named {prefix}_{threshold}.pdf
             threshold: Single threshold value or list of thresholds for filtering edges
-            output_file_prefix: Optional prefix for output files. If None, displays the plot(s).
-                              For multiple thresholds, each file will be named {prefix}_{threshold}.pdf
         """
         if self.consensus_graph is None:
             # Compute consensus graph if not already available
             self.get_consensus_graph()
 
-        if output_file_prefix:
-            self._ensure_output_dir(output_file_prefix)
+        self._ensure_output_dir(output_file_prefix)
 
         plotting.plot_thresholded_graph(
             data=self.log_data,
+            output_file_prefix=output_file_prefix,
             primary_tissue=self.primary_tissue,
             threshold=threshold,
-            output_file_prefix=output_file_prefix,
             consensus_graph=self.consensus_graph,
         )
 
