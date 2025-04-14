@@ -3,7 +3,7 @@
 A Python package for visualizing and analyzing [BEAM (Bayesian Evolutionary Analysis of Metastasis)](https://github.com/StephenStaklinski/beam) output.
 
 <div style="text-align: left;">
-  <img src="beam_visualization.png" alt="beam_visualization example outputs" width="400"/>
+  <img src="beam_visualization.png" alt="beam_visualization example outputs" width="250"/>
 </div>
 
 ## Installation
