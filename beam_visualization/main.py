@@ -337,7 +337,7 @@ class BeamResults:
         )
 
         # Get consensus graph if not already computed
-        if not hasattr(self, "consensus_graph"):
+        if self.consensus_graph is None:
             self.get_consensus_graph()
 
         # Plot metastasis timing

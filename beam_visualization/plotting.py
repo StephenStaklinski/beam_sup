@@ -1,6 +1,8 @@
 """Plotting functions for BEAM visualization."""
 
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 import seaborn as sns
 from typing import Optional, Dict, List, Union, Tuple
 import pandas as pd
@@ -426,9 +428,28 @@ def plot_metastasis_timing(
         min_prob_threshold: Minimum probability threshold for migrations to include in plots
         output_prefix: Optional prefix for output files
     """
-    # Convert metastasis times to DataFrame
-    df = pd.DataFrame(met_times)
+    
+    allowable_migrations = set()
+    for migration, prob in consensus_graph.items():
+        if float(prob) >= min_prob_threshold:
+            allowable_migrations.add(migration)
+    migration_counts = defaultdict(lambda: np.zeros(origin_time + 1))
+    migration_counts_mid_points = defaultdict(list)
 
+    for graph in met_times.values():
+        for migration, time in graph.items():
+            if migration not in allowable_migrations:
+                continue
+            # range is from origin at 0 to the end of experiment at origin_time
+            start_range = round(time[0])
+            end_range = round(time[1])
+            num_intervals = end_range - start_range + 1
+            prob = 1 / (len(met_times) * num_intervals)
+            migration_counts[migration][start_range : end_range + 1] += prob
+            migration_counts_mid_points[migration].append((start_range + end_range) / 2)
+
+    df = pd.DataFrame(migration_counts, index=np.arange(0, origin_time + 1)).T
+    
     # Split the migration strings into source and target tissues
     df.index = pd.MultiIndex.from_tuples(
         [
@@ -438,13 +459,9 @@ def plot_metastasis_timing(
         names=["source", "target"],
     )
 
-    # Get unique sources, ensuring origin_tissue is first
-    all_sources = set(df.index.get_level_values("source").unique())
-    if origin_tissue not in all_sources:
-        print(f"Warning: Origin tissue '{origin_tissue}' not found in metastasis times")
-        return
-
-    remaining_sources = sorted(list(all_sources - {origin_tissue}))
+    remaining_sources = sorted(
+        set(df.index.get_level_values("source").unique()) - {origin_tissue}
+    )
     remaining_sources.insert(0, origin_tissue)
 
     # Get unique tissues
@@ -456,19 +473,19 @@ def plot_metastasis_timing(
     )
     tissues.insert(0, origin_tissue)
 
-    # Create color palette
+    # Create a color palette for the tissues
     all_tissues = sorted(list(set(tissues) - {origin_tissue}))
+    custom_colors = DEFAULT_COLORS
     custom_colors = {
-        node: color
-        for node, color in zip(all_tissues, DEFAULT_COLORS[0 : len(all_tissues)])
+        node: color for node, color in zip(all_tissues, custom_colors[0 : len(all_tissues)])
     }
     custom_colors[origin_tissue] = "black"
 
-    # Plot probability distributions
+    # Create a grid of subplots with one row per source tissue
     fig, axes = plt.subplots(
         len(remaining_sources),
         1,
-        figsize=DEFAULT_FIGURE_SIZE,
+        figsize=(15, 3 * len(remaining_sources)),
         sharex=True,
         sharey=True,
     )
@@ -478,57 +495,123 @@ def plot_metastasis_timing(
             ax = axes
         else:
             ax = axes[i]
+        y = 0.1
+        for target in target_tissues:
+            if (source, target) in df.index:
+                y += 1
+                if "_1" in target:
+                    target_reformatted = target.split("_")[0]
+                else:
+                    target_reformatted = target
+                target_name = target.split("_")[0]
+                sns.lineplot(
+                    x=df.columns,
+                    y=df.loc[(source, target)],
+                    ax=ax,
+                    color=custom_colors[target_name],
+                )
+                ax.fill_between(
+                    df.columns,
+                    df.loc[(source, target)],
+                    alpha=0.3,
+                    color=custom_colors[target_name],
+                )
 
-        # Get migrations from this source
-        source_migrations = df.loc[source]
+        ax.set_ylabel(source, fontsize=DEFAULT_FONT_SIZE)
+        ax.tick_params(axis="both", which="major", labelsize=DEFAULT_FONT_SIZE)
+        # ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+        if i == len(remaining_sources) - 1:
+            ax.set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
 
-        # Plot each migration
-        for target in source_migrations.index:
-            # Get probability from consensus graph
-            migration = f"{source}_{target}"
-            prob = consensus_graph[migration]
+    # Create a single legend for all axes
+    handles = [
+        plt.Line2D([0], [0], color=color, lw=2) for tissue, color in custom_colors.items()
+    ]
+    labels = list(custom_colors.keys())
+    fig.legend(
+        handles,
+        labels,
+        bbox_to_anchor=(1.05, 0.75),
+        title="Target Tissue",
+        frameon=False,
+        fontsize=DEFAULT_FONT_SIZE,
+        title_fontsize=DEFAULT_FONT_SIZE,
+    )
 
-            if prob >= min_prob_threshold:
-                # Get times for this migration
-                times = source_migrations[target].dropna()
+    fig.text(
+        0.001,
+        0.5,
+        "Source tissue",
+        va="center",
+        ha="center",
+        rotation="vertical",
+        fontsize=DEFAULT_FONT_SIZE,
+    )
 
-                if len(times) > 0:
-                    # Plot histogram
-                    ax.hist(
-                        times,
-                        bins=DEFAULT_PLOT_STYLES["bins"],
-                        alpha=DEFAULT_PLOT_STYLES["alpha"],
-                        color=custom_colors[source],
-                        label=f"{target} (p={prob:.2f})",
-                        linewidth=DEFAULT_PLOT_STYLES["linewidth"],
-                    )
-
-        # Set labels and title
-        ax.set_ylabel("Count", fontsize=DEFAULT_FONT_SIZE)
-        ax.set_title(f"From {source}", fontsize=DEFAULT_FONT_SIZE)
-        ax.tick_params(axis="both", labelsize=DEFAULT_FONT_SIZE)
-
-        # Add legend
-        ax.legend(
-            bbox_to_anchor=DEFAULT_PLOT_STYLES["legend_position"],
-            loc="upper left",
-            borderaxespad=0.0,
-            frameon=False,
-            fontsize=DEFAULT_PLOT_STYLES["legend_fontsize"],
-            title=DEFAULT_PLOT_STYLES["legend_title"],
-            title_fontsize=DEFAULT_PLOT_STYLES["legend_title_fontsize"],
-        )
-
-    # Set x-axis label
-    if len(remaining_sources) == 1:
-        axes.set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
+    plt.tight_layout(rect=[0.02, 0, 0.88, 1])
+    if output_prefix:
+        plt.savefig(f"{output_prefix}_metastasis_timing_prob.pdf", bbox_inches='tight')
     else:
-        axes[-1].set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
+        plt.show()
+    plt.close()
+
+
+    # plot midpoints
+    fig, axes = plt.subplots(
+        len(remaining_sources),
+        1,
+        figsize=(15, 3 * len(remaining_sources)),
+        sharex=True,
+        sharey=True,
+    )
+    for i, source in enumerate(remaining_sources):
+        if len(remaining_sources) == 1:
+            ax = axes
+        else:
+            ax = axes[i]
+        for target in target_tissues:
+            migration = f"{source}_{target}"
+            if migration in migration_counts_mid_points:
+                if "_1" in target:
+                    target_reformatted = target.split("_")[0]
+                else:
+                    target_reformatted = target
+                target_name = target.split("_")[0]
+                ax.hist(
+                    migration_counts_mid_points[migration],
+                    bins=100,
+                    color=custom_colors[target_name],
+                    alpha=0.6,
+                    label=target_reformatted,
+                )
+        ax.set_ylabel(source, fontsize=DEFAULT_FONT_SIZE)
+        ax.tick_params(axis="both", which="major", labelsize=DEFAULT_FONT_SIZE)
+        if i == len(remaining_sources) - 1:
+            ax.set_xlabel("Time", fontsize=DEFAULT_FONT_SIZE)
+
+    fig.legend(
+        handles,
+        labels,
+        bbox_to_anchor=(1.05, 0.75),
+        title="Target Tissue",
+        frameon=False,
+        fontsize=DEFAULT_FONT_SIZE,
+        title_fontsize=DEFAULT_FONT_SIZE,
+    )
+    fig.text(
+        0.001,
+        0.5,
+        "Source tissue",
+        va="center",
+        ha="center",
+        rotation="vertical",
+        fontsize=DEFAULT_FONT_SIZE,
+    )
 
     plt.tight_layout()
 
     if output_prefix:
-        plt.savefig(f"{output_prefix}_metastasis_timing.pdf")
+        plt.savefig(f"{output_prefix}_metastasis_timing_midpoints.pdf", bbox_inches='tight')
     else:
         plt.show()
     plt.close()
