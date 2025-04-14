@@ -264,7 +264,7 @@ class BeamResults:
         self,
         n: int = 1,
         output_prefix: Optional[str] = None,
-        burnin_percent: float = 0.1,
+        burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
     ) -> None:
         """
         Sample trees from the posterior and plot them with their migration graphs.
@@ -298,7 +298,7 @@ class BeamResults:
 
     def get_metastasis_times(
         self,
-        burnin_percent: float = 0.1,
+        burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
         min_prob_threshold: float = 0.5,
         output_prefix: Optional[str] = None,
     ) -> Dict[str, Dict[str, Tuple[float, float]]]:
