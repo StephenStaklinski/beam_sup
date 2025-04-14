@@ -1,0 +1,6 @@
+# Invalid NEXUS format with missing taxa block
+Begin trees
+Translate
+1 A,
+2 B
+Tree tree_1 = (1,2); 

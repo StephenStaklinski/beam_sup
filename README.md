@@ -86,6 +86,16 @@ metastasis_times = results.get_metastasis_times(
 )
 ```
 
+## Testing
+
+```bash
+# Install the package with test dependencies
+pip install -e ".[test]"
+
+# Run all tests
+pytest --cov=beam_visualization --cov-report=term-missing
+```
+
 ## License
 
 This project is licensed under the MIT License.

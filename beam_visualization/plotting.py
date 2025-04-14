@@ -220,25 +220,18 @@ def plot_sampled_tree(
     # Process nodes and get tissues
     i = 1
     for node in tree.traverse():
-        # Extract location from annotation if present
-        if "&location=" in node.name:
-            match = re.search(r'&location="([^"]+)"', node.name)
-            if match:
-                node.tissue = match.group(1)
-                # Keep original name without annotation
-                node.name = node.name.split("[")[0]
-        else:
-            # For nodes without location annotation, set tissue to none
-            node.tissue = None
+        # Extract location from annotation
+        match = re.search(r'&location="([^"]+)"', node.name)
+        if match:
+            node.tissue = match.group(1)
+            # Keep original name without annotation
+            node.name = node.name.split("[")[0]
 
         all_tissues.add(node.tissue)
 
-    # Check ultrametricity
     dists = {
         round(node.get_distance(tree), 5) for node in tree.traverse() if node.is_leaf()
     }
-    if len(dists) != 1:
-        print(f"WARNING: Tree {tree_num} is not ultrametric")
 
     # Add origin node
     tree_height = dists.pop()
@@ -391,7 +384,7 @@ def plot_metastasis_timing(
     met_times: Dict[str, Dict[str, Tuple[float, float]]],
     consensus_graph: Dict[str, float],
     origin_time: float,
-    origin_tissue: str,
+    primary_tissue: str,
     output_prefix: str,
     min_prob_threshold: float = config.DEFAULT_MIN_PROB_THRESHOLD,
 ) -> None:
@@ -402,7 +395,7 @@ def plot_metastasis_timing(
         met_times: Dictionary mapping tree labels to dictionaries of metastasis events
         consensus_graph: Dictionary mapping migration patterns to their probabilities
         origin_time: Time of origin
-        origin_tissue: Primary tissue label
+        primary_tissue: Primary tissue label
         output_prefix: Prefix for output files
         min_prob_threshold: Minimum probability threshold for migrations to include in plots
     """
@@ -411,7 +404,7 @@ def plot_metastasis_timing(
     for migration, prob in consensus_graph.items():
         if float(prob) >= min_prob_threshold:
             allowable_migrations.add(migration)
-    migration_counts = defaultdict(lambda: np.zeros(origin_time + 1))
+    migration_counts = defaultdict(lambda: np.zeros(int(origin_time) + 1))
     migration_counts_mid_points = defaultdict(list)
 
     for graph in met_times.values():
@@ -426,7 +419,7 @@ def plot_metastasis_timing(
             migration_counts[migration][start_range : end_range + 1] += prob
             migration_counts_mid_points[migration].append((start_range + end_range) / 2)
 
-    df = pd.DataFrame(migration_counts, index=np.arange(0, origin_time + 1)).T
+    df = pd.DataFrame(migration_counts, index=np.arange(0, int(origin_time) + 1)).T
 
     # Split the migration strings into source and target tissues
     df.index = pd.MultiIndex.from_tuples(
@@ -438,27 +431,27 @@ def plot_metastasis_timing(
     )
 
     remaining_sources = sorted(
-        set(df.index.get_level_values("source").unique()) - {origin_tissue}
+        set(df.index.get_level_values("source").unique()) - {primary_tissue}
     )
-    remaining_sources.insert(0, origin_tissue)
+    remaining_sources.insert(0, primary_tissue)
 
     # Get unique tissues
     target_tissues = sorted(set(df.index.get_level_values("target")))
     target_tissues_no_num = set([tissue.split("_")[0] for tissue in target_tissues])
     tissues = sorted(
         set(df.index.get_level_values("source")).union(target_tissues_no_num)
-        - {origin_tissue}
+        - {primary_tissue}
     )
-    tissues.insert(0, origin_tissue)
+    tissues.insert(0, primary_tissue)
 
     # Create a color palette for the tissues
-    all_tissues = sorted(list(set(tissues) - {origin_tissue}))
+    all_tissues = sorted(list(set(tissues) - {primary_tissue}))
     custom_colors = config.DEFAULT_COLORS
     custom_colors = {
         node: color
         for node, color in zip(all_tissues, custom_colors[0 : len(all_tissues)])
     }
-    custom_colors[origin_tissue] = "black"
+    custom_colors[primary_tissue] = "black"
 
     # Create a grid of subplots with one row per source tissue
     fig, axes = plt.subplots(
@@ -470,10 +463,6 @@ def plot_metastasis_timing(
     )
 
     for i, source in enumerate(remaining_sources):
-        if len(remaining_sources) == 1:
-            ax = axes
-        else:
-            ax = axes[i]
         y = 0.1
         for target in target_tissues:
             if (source, target) in df.index:
@@ -486,21 +475,21 @@ def plot_metastasis_timing(
                 sns.lineplot(
                     x=df.columns,
                     y=df.loc[(source, target)],
-                    ax=ax,
+                    ax=axes[i],
                     color=custom_colors[target_name],
                 )
-                ax.fill_between(
+                axes[i].fill_between(
                     df.columns,
                     df.loc[(source, target)],
                     alpha=0.3,
                     color=custom_colors[target_name],
                 )
 
-        ax.set_ylabel(source, fontsize=config.DEFAULT_FONT_SIZE)
-        ax.tick_params(axis="both", which="major", labelsize=config.DEFAULT_FONT_SIZE)
+        axes[i].set_ylabel(source, fontsize=config.DEFAULT_FONT_SIZE)
+        axes[i].tick_params(axis="both", which="major", labelsize=config.DEFAULT_FONT_SIZE)
         # ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
         if i == len(remaining_sources) - 1:
-            ax.set_xlabel("Time", fontsize=config.DEFAULT_FONT_SIZE)
+            axes[i].set_xlabel("Time", fontsize=config.DEFAULT_FONT_SIZE)
 
     # Create a single legend for all axes
     handles = [
@@ -541,10 +530,6 @@ def plot_metastasis_timing(
         sharey=True,
     )
     for i, source in enumerate(remaining_sources):
-        if len(remaining_sources) == 1:
-            ax = axes
-        else:
-            ax = axes[i]
         for target in target_tissues:
             migration = f"{source}_{target}"
             if migration in migration_counts_mid_points:
@@ -553,17 +538,17 @@ def plot_metastasis_timing(
                 else:
                     target_reformatted = target
                 target_name = target.split("_")[0]
-                ax.hist(
+                axes[i].hist(
                     migration_counts_mid_points[migration],
                     bins=100,
                     color=custom_colors[target_name],
                     alpha=0.6,
                     label=target_reformatted,
                 )
-        ax.set_ylabel(source, fontsize=config.DEFAULT_FONT_SIZE)
-        ax.tick_params(axis="both", which="major", labelsize=config.DEFAULT_FONT_SIZE)
+        axes[i].set_ylabel(source, fontsize=config.DEFAULT_FONT_SIZE)
+        axes[i].tick_params(axis="both", which="major", labelsize=config.DEFAULT_FONT_SIZE)
         if i == len(remaining_sources) - 1:
-            ax.set_xlabel("Time", fontsize=config.DEFAULT_FONT_SIZE)
+            axes[i].set_xlabel("Time", fontsize=config.DEFAULT_FONT_SIZE)
 
     fig.legend(
         handles,

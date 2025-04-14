@@ -74,7 +74,16 @@ def get_consensus_graph(
         Dict[str, float]: Dictionary mapping migration patterns to their probabilities.
         Each key is in the format "source_target_count" and the value is the probability
         of that migration pattern occurring in the posterior distribution.
+
+    Raises:
+        ValueError: If trees is None or empty
     """
+    if not isinstance(trees, dendropy.TreeList):
+        raise ValueError("Trees must be a dendropy.TreeList object")
+        
+    if len(trees) == 0:
+        raise ValueError("No trees to analyze")
+
     print("\nCalculating consensus graph...")
 
     # Process posterior trees

@@ -9,7 +9,7 @@ from collections import defaultdict
 
 def compute_posterior_mutual_info(
     trees,
-    origin_tissue: str,
+    primary_tissue: str,
     threads: int = 1,
     output_file_matrix: Optional[str] = None,
     output_file_information: Optional[str] = None,
@@ -18,7 +18,7 @@ def compute_posterior_mutual_info(
 
     Args:
         trees: Dendropy TreeList object
-        origin_tissue: Name of the origin tissue
+        primary_tissue: Name of the origin tissue
         threads: Number of threads to use for parallel processing
         output_file_matrix: Optional path to save the count matrix
         output_file_information: Optional path to save the mutual information score
@@ -29,6 +29,9 @@ def compute_posterior_mutual_info(
             - Count matrix as numpy array
             - List of tissue names in order
     """
+    if len(trees) == 0:
+        raise ValueError("No trees to analyze")
+
     # Process trees in parallel to get migration counts
     migration_counts = defaultdict(lambda: defaultdict(int))
     tissue_types = set()
@@ -46,9 +49,9 @@ def compute_posterior_mutual_info(
                 counts[source][target] += 1
             else:
                 target = node.annotations.get_value("location")
-                types.add(origin_tissue)
+                types.add(primary_tissue)
                 types.add(target)
-                counts[origin_tissue][target] += 1
+                counts[primary_tissue][target] += 1
 
         return types, counts
 
@@ -62,8 +65,8 @@ def compute_posterior_mutual_info(
                 migration_counts[source][target] += count
 
     # Create count matrix
-    tissue_list = sorted(tissue_types - {origin_tissue})
-    tissue_list.insert(0, origin_tissue)
+    tissue_list = sorted(tissue_types - {primary_tissue})
+    tissue_list.insert(0, primary_tissue)
     n = len(tissue_list)
     count_matrix = np.zeros((n, n))
     for i, source in enumerate(tissue_list):

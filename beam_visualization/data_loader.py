@@ -23,26 +23,7 @@ def load_trees_file(trees_file: str) -> dendropy.TreeList:
         # Try loading as NEXUS format
         trees = dendropy.TreeList.get(path=trees_file, schema="nexus")
     except Exception as e:
-        try:
-            # If NEXUS parsing fails, try to fix case sensitivity
-            with open(trees_file, "r") as f:
-                content = f.read()
-
-            # Replace case-sensitive NEXUS keywords
-            content = content.replace("Begin taxa", "BEGIN TAXA")
-            content = content.replace("Dimensions", "DIMENSIONS")
-            content = content.replace("Taxlabels", "TAXLABELS")
-            content = content.replace("Begin trees", "BEGIN TREES")
-
-            # Write to temporary file
-            temp_file = trees_file + ".temp"
-            with open(temp_file, "w") as f:
-                f.write(content)
-
-            trees = dendropy.TreeList.get(path=temp_file, schema="nexus")
-            os.remove(temp_file)
-        except Exception as e:
-            raise ValueError(f"Failed to load trees file: {e}")
+        raise ValueError(f"Failed to load trees file: {e}")
 
     return trees
 
@@ -62,6 +43,10 @@ def load_log_file(log_file: str) -> pd.DataFrame:
 
     try:
         log_data = pd.read_csv(log_file, sep="\t", comment="#")
+
+        required_columns = ['Sample', 'posterior', 'likelihood', 'prior']
+        if not all(col in log_data.columns for col in required_columns):
+            raise ValueError("Log file missing required columns")
     except Exception as e:
         raise ValueError(f"Failed to load log file: {e}")
 

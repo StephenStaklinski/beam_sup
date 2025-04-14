@@ -29,7 +29,11 @@ class BeamResults:
                 os.makedirs(output_dir, exist_ok=True)
 
     def __init__(
-        self, trees_file: str, log_file: str, primary_tissue: str, total_time: float
+        self, 
+        trees_file: str, 
+        log_file: str, 
+        primary_tissue: str, 
+        total_time: float
     ):
         """
         Initialize BeamResults with BEAM output files.
@@ -47,12 +51,6 @@ class BeamResults:
         self.trees, self.log_data = data_loader.load_beam_files(trees_file, log_file)
         self.consensus_graph = None
         self.metastasis_times = None
-
-        # Validate data
-        if len(self.trees) == 0:
-            raise ValueError("No trees loaded")
-        if len(self.log_data) == 0:
-            raise ValueError("No log data loaded")
 
     def info(self) -> None:
         """Print information about the loaded data."""
@@ -152,6 +150,10 @@ class BeamResults:
         Returns:
             Dict[str, float]: Dictionary mapping migration patterns to their probabilities
         """
+
+        if self.trees is None or len(self.trees) == 0:
+            raise ValueError("No trees to analyze")
+
         # Only compute consensus graph if not already computed or if force_recompute is True
         if self.consensus_graph is None or force_recompute:
             self.consensus_graph = formatting.get_consensus_graph(
@@ -246,7 +248,7 @@ class BeamResults:
 
         return statistics.compute_posterior_mutual_info(
             trees=self.trees,
-            origin_tissue=self.primary_tissue,
+            primary_tissue=self.primary_tissue,
             threads=threads,
             output_file_matrix=output_file_matrix,
             output_file_information=output_file_information,
@@ -255,7 +257,7 @@ class BeamResults:
     def sample_and_plot_trees(
         self,
         n: int = 1,
-        output_prefix: Optional[str] = None,
+        output_prefix: str = None,
         burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
     ) -> None:
         """
@@ -263,36 +265,31 @@ class BeamResults:
 
         Args:
             n: Number of trees to sample
-            output_prefix: Optional prefix for output files. If None, plots are displayed instead of saved.
+            output_prefix: Prefix for output files.
             burnin_percent: Percentage of trees to discard as burnin
         """
-        if self.trees is None:
-            raise ValueError("Trees must be loaded before plotting sampled trees")
-
-        if output_prefix:
-            self._ensure_output_dir(output_prefix)
+        self._ensure_output_dir(output_prefix)
 
         # Sample trees
         sampled_trees = formatting.sample_trees(
             self.trees, n=n, burnin_percent=burnin_percent, output_prefix=output_prefix
         )
 
-        if output_prefix:
-            # Plot each tree
-            for i, tree in enumerate(sampled_trees, 1):
-                plotting.plot_sampled_tree(
-                    newick_str=tree,
-                    primary_tissue=self.primary_tissue,
-                    total_time=self.total_time,
-                    output_prefix=output_prefix,
-                    tree_num=i,
-                )
+        # Plot each tree
+        for i, tree in enumerate(sampled_trees, 1):
+            plotting.plot_sampled_tree(
+                newick_str=tree,
+                primary_tissue=self.primary_tissue,
+                total_time=self.total_time,
+                output_prefix=output_prefix,
+                tree_num=i,
+            )
 
     def get_metastasis_times(
         self,
         burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
         min_prob_threshold: float = config.DEFAULT_MIN_PROB_THRESHOLD,
-        output_prefix: Optional[str] = None,
+        output_prefix: str = None,
         force_recompute: bool = False,
     ) -> Dict[str, Dict[str, Tuple[float, float]]]:
         """
@@ -301,7 +298,7 @@ class BeamResults:
         Args:
             burnin_percent: Percentage of trees to discard as burnin
             min_prob_threshold: Minimum probability threshold for migrations to include in plots
-            output_prefix: Optional prefix for output files. If provided:
+            output_prefix: Prefix for output files:
                 - Metastasis times will be written to {output_prefix}.pkl
                 - Plots will be saved with the given prefix
             force_recompute: If True, forces recalculation of metastasis times even if already computed
@@ -310,8 +307,7 @@ class BeamResults:
             Dict[str, Dict[str, Tuple[float, float]]]: Dictionary mapping tree labels to dictionaries of metastasis events.
             Each metastasis event is a tuple of (start_time, end_time) for the migration.
         """
-        if output_prefix:
-            self._ensure_output_dir(output_prefix)
+        self._ensure_output_dir(output_prefix)
 
         # Only compute metastasis times if not already computed or if force_recompute is True
         if self.metastasis_times is None or force_recompute:
@@ -333,7 +329,7 @@ class BeamResults:
             met_times=self.metastasis_times,
             consensus_graph=self.consensus_graph,
             origin_time=self.total_time,
-            origin_tissue=self.primary_tissue,
+            primary_tissue=self.primary_tissue,
             min_prob_threshold=min_prob_threshold,
             output_prefix=output_prefix,
         )
