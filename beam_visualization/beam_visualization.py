@@ -4,6 +4,7 @@ from typing import Optional, Dict, List, Union, Tuple
 import dendropy
 import numpy as np
 import pandas as pd
+import os
 
 from . import data_loader
 from . import plotting
@@ -14,6 +15,18 @@ from . import statistics
 
 class BeamResults:
     """A class to handle BEAM output visualization and analysis."""
+
+    def _ensure_output_dir(self, filepath: Optional[str]) -> None:
+        """
+        Ensure the directory for the given filepath exists.
+        
+        Args:
+            filepath: Path to the file to be written
+        """
+        if filepath:
+            output_dir = os.path.dirname(filepath)
+            if output_dir and not os.path.exists(output_dir):
+                os.makedirs(output_dir, exist_ok=True)
 
     def __init__(
         self, trees_file: str, log_file: str, primary_tissue: Optional[str] = None
@@ -113,6 +126,10 @@ class BeamResults:
             parameter: Specific parameter to plot. If None, plots all parameters.
             output_file: Path to save the plot. If None, displays the plot.
         """
+
+        if output_file:
+            self._ensure_output_dir(output_file)
+
         plotting.plot_parameters(self.log_data, parameter, output_file)
 
     def get_consensus_graph(
@@ -139,6 +156,7 @@ class BeamResults:
         )
 
         if output_file:
+            self._ensure_output_dir(output_file)
             # Sort the graph by probability in descending order
             sorted_graph = dict(
                 sorted(self.consensus_graph.items(), key=lambda x: x[1], reverse=True)
@@ -151,7 +169,9 @@ class BeamResults:
         return self.consensus_graph
 
     def plot_probability_graph(
-        self, output_file: Optional[str] = None, primary_tissue: Optional[str] = None
+        self, 
+        output_file: Optional[str] = None, 
+        primary_tissue: Optional[str] = None
     ) -> None:
         """
         Plot the consensus migration graph with edge thicknesses proportional to probability.
@@ -173,6 +193,9 @@ class BeamResults:
             self.get_consensus_graph(
                 primary_tissue=primary_tissue or self.primary_tissue
             )
+
+        if output_file:
+            self._ensure_output_dir(output_file)
 
         plotting.plot_probability_graph(
             data=self.log_data,
@@ -209,6 +232,9 @@ class BeamResults:
             self.get_consensus_graph(
                 primary_tissue=primary_tissue or self.primary_tissue
             )
+
+        if output_file_prefix:
+            self._ensure_output_dir(output_file_prefix)
 
         plotting.plot_thresholded_graph(
             data=self.log_data,
@@ -248,6 +274,11 @@ class BeamResults:
         if self.trees is None:
             raise ValueError("Trees must be loaded before computing mutual information")
 
+        if output_file_matrix:
+            self._ensure_output_dir(output_file_matrix)
+        if output_file_information:
+            self._ensure_output_dir(output_file_information)
+
         return statistics.compute_posterior_mutual_info(
             trees=self.trees,
             origin_tissue=self.primary_tissue,
@@ -280,6 +311,9 @@ class BeamResults:
 
         if self.trees is None:
             raise ValueError("Trees must be loaded before plotting sampled trees")
+
+        if output_prefix:
+            self._ensure_output_dir(output_prefix)
 
         # Sample trees
         sampled_trees = formatting.sample_trees(
@@ -327,6 +361,9 @@ class BeamResults:
                 raise ValueError("Primary tissue must be provided")
             else:
                 primary_tissue = self.primary_tissue
+
+        if output_prefix:
+            self._ensure_output_dir(output_prefix)
 
         # Get metastasis times
         met_times = formatting.get_all_posterior_metastasis_times(

@@ -39,7 +39,4 @@ Thumbs.db
 .coverage
 
 # Example outputs
-examples/*.pdf
-examples/*.csv
-examples/*.txt
-examples/*.pkl
+examples/output/

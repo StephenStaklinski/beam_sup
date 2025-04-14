@@ -30,7 +30,6 @@ results.info()
 
 # List available parameters
 parameters = results.get_parameters()
-print(f"Available parameters: {parameters}")
 
 # Get statistics for a parameter
 results.get_parameter_stats(parameters[10])
@@ -38,38 +37,38 @@ results.get_parameter_stats(parameters[10])
 # Plot parameter distributions
 results.plot_parameters(
     parameters[10], 
-    output_file = "examples/param.pdf"
+    output_file = "examples/output/param.pdf"
     )
 
 # Get consensus graph
 results.get_consensus_graph(
-    output_file = "examples/probability_graph.csv"
+    output_file = "examples/output/probability_graph.csv"
     )
 
 # Plot consensus graph
-results.plot_probability_graph(output_file="examples/probability_graph.pdf")
+results.plot_probability_graph(output_file="examples/output/probability_graph.pdf")
 results.plot_thresholded_graph(
     threshold=[0.5, 0.75, 0.90], 
-    output_file_prefix="examples/thresholded_graph"
+    output_file_prefix="examples/output/thresholded_graph"
     )
 
 # Calculate mutual information based on a migration count matrix from traversing the posterior trees
 results.compute_posterior_mutual_info(
-    output_file_matrix = "examples/mutual_info_matrix.csv", 
-    output_file_information = "examples/mutual_info.txt"
+    output_file_matrix = "examples/output/mutual_info_matrix.csv", 
+    output_file_information = "examples/output/mutual_info.txt"
     )
 
 # Sample and plot individual posterior tree samples as tree, graph, and timing plots
 results.sample_and_plot_trees(
     n=2,
     total_time=54,
-    output_prefix="examples/posterior_tree_sample"
+    output_prefix="examples/output/posterior_tree_sample"
 )
 
 # Record and plot metastasis times across all posterior samples
 metastasis_times = results.get_metastasis_times(
     total_time=54,
-    output_prefix="examples/metastasis_timing"
+    output_prefix="examples/output/metastasis_timing"
 )
 ```
 

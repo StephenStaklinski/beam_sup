@@ -1,6 +1,6 @@
 """BEAM visualization package."""
 
-from .main import BeamResults
+from .beam_visualization import BeamResults
 from .plotting import (
     plot_parameters,
     plot_sampled_tree,
