@@ -47,6 +47,11 @@ results.plot_parameters(
     output_file = "examples/output/param.pdf"
     )
 
+# Plot the mean rate matrix as a heatmap
+results.plot_rate_matrix(
+    output_file = "examples/output/rate_matrix.pdf"
+)
+
 # Get consensus graph
 results.get_consensus_graph(
     output_file = "examples/output/probability_graph.csv"

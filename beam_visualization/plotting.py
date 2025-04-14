@@ -587,3 +587,75 @@ def plot_metastasis_timing(
     plt.tight_layout()
     plt.savefig(f"{output_prefix}_metastasis_timing_midpoints.pdf", bbox_inches="tight")
     plt.close()
+
+
+def plot_rate_matrix(
+    data: pd.DataFrame,
+    output_file: str,
+    primary_tissue: str,
+) -> None:
+    """
+    Plot the tissue substitution rate matrix as a heatmap.
+
+    Args:
+        data (pd.DataFrame): The log data containing tissue substitution rates
+        output_file (str): Path to save the plot
+        primary_tissue (str): Primary tissue label
+    """
+    # Get tissue rate column names
+    tissue_rate_col_names = [
+        name for name in data.columns if name.startswith("tissueSubstModelLogger")
+    ]
+
+    if len(tissue_rate_col_names) == 0:
+        raise ValueError("No tissue substitution rate columns found in log data")
+    
+    # Get unique tissues
+    tissues = list(
+        set(
+            [
+                tissue
+                for name in tissue_rate_col_names
+                for tissue in name.replace("tissueSubstModelLogger.relGeoRate_", "").split(
+                    "_"
+                )
+            ]
+        )
+    )
+    tissues = [primary_tissue] + sorted([tis for tis in tissues if tis != primary_tissue])
+
+    # Create rate matrix
+    num_tissues = len(tissues)
+    rate_matrix = np.zeros((num_tissues, num_tissues))
+
+    for source in tissues:
+        for recipient in tissues:
+            if source == recipient:
+                continue
+            rate = data[f'tissueSubstModelLogger.relGeoRate_{source}_{recipient}'].mean()
+            i = tissues.index(source)
+            j = tissues.index(recipient)
+            rate_matrix[i, j] = rate
+
+    # Plot the rate matrix
+    length, height = config.DEFAULT_FIGURE_SIZE
+    plt.figure(figsize=(height, height))
+    heatmap = sns.heatmap(
+        rate_matrix,
+        xticklabels=tissues,
+        yticklabels=tissues,
+        annot=True,
+        cmap="YlOrRd",
+        annot_kws={"size": config.DEFAULT_FONT_SIZE},
+        cbar_kws={"label": "Rate"},
+    )
+    heatmap.figure.axes[-1].yaxis.label.set_size(config.DEFAULT_FONT_SIZE)
+    heatmap.figure.axes[-1].tick_params(labelsize=config.DEFAULT_FONT_SIZE)
+    plt.xlabel("Recipient", fontsize=config.DEFAULT_FONT_SIZE)
+    plt.ylabel("Source", fontsize=config.DEFAULT_FONT_SIZE)
+    plt.xticks(fontsize=config.DEFAULT_FONT_SIZE)
+    plt.yticks(fontsize=config.DEFAULT_FONT_SIZE)
+    plt.tight_layout()
+
+    plt.savefig(output_file)
+    plt.close()

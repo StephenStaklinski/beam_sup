@@ -339,3 +339,17 @@ class BeamResults:
         )
 
         return self.metastasis_times
+
+    def plot_rate_matrix(self, output_file: str) -> None:
+        """
+        Plot the tissue substitution rate matrix as a heatmap.
+
+        Args:
+            output_file: Path to save the plot
+        """
+        self._ensure_output_dir(output_file)
+        plotting.plot_rate_matrix(
+            data=self.log_data,
+            output_file=output_file,
+            primary_tissue=self.primary_tissue,
+        )
