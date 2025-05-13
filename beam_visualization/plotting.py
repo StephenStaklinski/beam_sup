@@ -131,6 +131,9 @@ def plot_thresholded_graph(
     # Convert single threshold to list for uniform handling
     thresholds = [threshold] if isinstance(threshold, (int, float)) else threshold
 
+    # Ensure all thresholds are float
+    thresholds = [float(threshold) for threshold in thresholds]
+
     # Find all tissues to set the node colors
     all_tissues = sorted(
         list(
@@ -168,7 +171,7 @@ def plot_thresholded_graph(
             )
 
         for edge, probability in consensus_graph.items():
-            if probability > current_threshold:
+            if float(probability) > current_threshold:
                 source, target, num = edge.split("_")
                 if G.has_edge(source, target):
                     G[source][target][0]["label"] = str(
@@ -454,13 +457,17 @@ def plot_metastasis_timing(
     custom_colors[primary_tissue] = "black"
 
     # Create a grid of subplots with one row per source tissue
-    fig, axes = plt.subplots(
-        len(remaining_sources),
-        1,
-        figsize=(15, 3 * len(remaining_sources)),
-        sharex=True,
-        sharey=True,
-    )
+    if len(remaining_sources) == 1:
+        fig, ax = plt.subplots(figsize=(15, 3))
+        axes = [ax]  # Wrap single axis in list for consistent handling
+    else:
+        fig, axes = plt.subplots(
+            len(remaining_sources),
+            1,
+            figsize=(15, 3 * len(remaining_sources)),
+            sharex=True,
+            sharey=True,
+        )
 
     for i, source in enumerate(remaining_sources):
         y = 0.1
@@ -522,13 +529,18 @@ def plot_metastasis_timing(
     plt.close()
 
     # plot midpoints
-    fig, axes = plt.subplots(
-        len(remaining_sources),
-        1,
-        figsize=(15, 3 * len(remaining_sources)),
-        sharex=True,
-        sharey=True,
-    )
+    if len(remaining_sources) == 1:
+        fig, ax = plt.subplots(figsize=(15, 3))
+        axes = [ax]  # Wrap single axis in list for consistent handling
+    else:
+        fig, axes = plt.subplots(
+            len(remaining_sources),
+            1,
+            figsize=(15, 3 * len(remaining_sources)),
+            sharex=True,
+            sharey=True,
+        )
+
     for i, source in enumerate(remaining_sources):
         for target in target_tissues:
             migration = f"{source}_{target}"
