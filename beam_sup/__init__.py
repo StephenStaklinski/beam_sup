@@ -1,6 +1,6 @@
-"""BEAM visualization package."""
+"""BEAM sup package."""
 
-from .beam_visualization import BeamResults
+from .beam_sup import BeamResults
 from .plotting import (
     plot_parameters,
     plot_sampled_tree,

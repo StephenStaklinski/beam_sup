@@ -14,7 +14,7 @@ from . import statistics
 
 
 class BeamResults:
-    """A class to handle BEAM output visualization and analysis."""
+    """A class to handle BEAM output analysis."""
 
     def _ensure_output_dir(self, filepath: Optional[str]) -> None:
         """

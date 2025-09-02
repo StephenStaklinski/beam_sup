@@ -1,4 +1,4 @@
-"""Configuration settings for beam_visualization."""
+"""Configuration settings for beam_sup."""
 
 # File parsing settings
 DEFAULT_BURNIN_PERCENT = 0.0

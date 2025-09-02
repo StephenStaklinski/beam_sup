@@ -1,9 +1,9 @@
-# BEAM Visualization
+# BEAM sup
 
-A Python package for visualizing and analyzing [BEAM (Bayesian Evolutionary Analysis of Metastasis)](https://github.com/StephenStaklinski/beam) output.
+A Python package for analyzing [BEAM (Bayesian Evolutionary Analysis of Metastasis)](https://github.com/StephenStaklinski/beam) output.
 
 <div style="text-align: left;">
-  <img src="beam_visualization.png" alt="beam_visualization example outputs" width="250"/>
+  <img src="beam_sup.png" alt="example outputs" width="250"/>
 </div>
 
 ## Installation
@@ -11,8 +11,8 @@ A Python package for visualizing and analyzing [BEAM (Bayesian Evolutionary Anal
 You can install the package using pip:
 
 ```bash
-git clone https://github.com/StephenStaklinski/beam_visualization.git
-cd beam_visualization
+git clone https://github.com/StephenStaklinski/beam_sup.git
+cd beam_sup
 pip install -e .
 ```
 
@@ -20,10 +20,10 @@ pip install -e .
 ## Basic Usage
 
 ```python
-import beam_visualization
+import beam_sup
 
 # Initialize with BEAM output files
-results = beam_visualization.BeamResults(
+results = beam_sup.BeamResults(
     "examples/data/example.trees", 
     "examples/data/example.log", 
     primary_tissue="LL",
@@ -93,7 +93,7 @@ metastasis_times = results.get_metastasis_times(
 pip install -e ".[test]"
 
 # Run all tests
-pytest --cov=beam_visualization --cov-report=term-missing
+pytest --cov=beam_sup --cov-report=term-missing
 ```
 
 ## License

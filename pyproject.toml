@@ -3,9 +3,9 @@ requires = ["setuptools>=64.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "beam_visualization"
+name = "beam_sup"
 version = "0.1.0"
-description = "A Python package for visualizing and analyzing BEAM output"
+description = "A Python package for analyzing BEAM output"
 authors = [
     {name = "Stephen Staklinski", email = "staklins@cshl.edu"},
 ]
@@ -32,9 +32,9 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/StephenStaklinski/beam_visualization"
+Homepage = "https://github.com/StephenStaklinski/beam_sup"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "--cov=beam_visualization --cov-report=term-missing" 
+addopts = "--cov=beam_sup --cov-report=term-missing" 
