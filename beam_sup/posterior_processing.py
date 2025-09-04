@@ -11,8 +11,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
-from . import config
+from .config import DEFAULT_BURNIN_PERCENT, DEFAULT_CORES, DEFAULT_NUM_SAMPLES
 
 
 def _process_tree_for_consensus(tree, primary_tissue):
@@ -59,8 +60,8 @@ def _process_tree_wrapper(args):
 def get_consensus_graph(
     trees: dendropy.TreeList,
     primary_tissue: str,
-    burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
-    cores: int = config.DEFAULT_CORES,
+    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
+    cores: int = DEFAULT_CORES,
 ) -> Dict[str, float]:
     """
     Calculate consensus graph from migration counts in trees.
@@ -68,8 +69,8 @@ def get_consensus_graph(
     Args:
         trees (dendropy.TreeList): The trees to analyze
         primary_tissue (str): Primary tissue label for migration analysis
-        burnin_percent (float): Percentage of trees to discard as burnin. config.DEFAULT is 0.0 (no burnin).
-        cores (int): Number of CPU cores to use for parallel processing. config.DEFAULT is 1 (single core).
+        burnin_percent (float): Percentage of trees to discard as burnin. Default is 0.0 (no burnin).
+        cores (int): Number of CPU cores to use for parallel processing. Default is 1 (single core).
 
     Returns:
         Dict[str, float]: Dictionary mapping migration patterns to their probabilities.
@@ -115,8 +116,8 @@ def get_consensus_graph(
 
 def sample_trees(
     trees: dendropy.TreeList,
-    n: int = config.DEFAULT_NUM_SAMPLES,
-    burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
+    n: int = DEFAULT_NUM_SAMPLES,
+    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
     output_prefix: Optional[str] = None,
 ) -> List[str]:
     """
@@ -182,7 +183,7 @@ def get_all_posterior_metastasis_times(
     trees: dendropy.TreeList,
     total_time: float,
     primary_tissue: Optional[str] = None,
-    burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
+    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
     output_prefix: Optional[str] = None,
 ) -> Dict[str, Dict[str, Tuple[float, float]]]:
     """
@@ -292,3 +293,96 @@ def get_all_posterior_metastasis_times(
             pickle.dump(all_met_events, f)
 
     return all_met_events
+
+
+def compute_posterior_mutual_info(
+    trees,
+    primary_tissue: str,
+    threads: int = 1,
+    output_file_matrix: Optional[str] = None,
+    output_file_information: Optional[str] = None,
+) -> Tuple[float, np.ndarray, List[str]]:
+    """Calculate mutual information from migration patterns in a set of trees.
+
+    Args:
+        trees: Dendropy TreeList object
+        primary_tissue: Name of the origin tissue
+        threads: Number of threads to use for parallel processing
+        output_file_matrix: Optional path to save the count matrix
+        output_file_information: Optional path to save the mutual information score
+
+    Returns:
+        Tuple containing:
+            - Mutual information score
+            - Count matrix as numpy array
+            - List of tissue names in order
+    """
+    if len(trees) == 0:
+        raise ValueError("No trees to analyze")
+
+    # Process trees in parallel to get migration counts
+    migration_counts = defaultdict(lambda: defaultdict(int))
+    tissue_types = set()
+
+    def process_tree(tree):
+        counts = defaultdict(lambda: defaultdict(int))
+        types = set()
+
+        for node in tree.preorder_node_iter():
+            if node.parent_node:
+                source = node.parent_node.annotations.get_value("location")
+                target = node.annotations.get_value("location")
+                types.add(source)
+                types.add(target)
+                counts[source][target] += 1
+            else:
+                target = node.annotations.get_value("location")
+                types.add(primary_tissue)
+                types.add(target)
+                counts[primary_tissue][target] += 1
+
+        return types, counts
+
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        results = executor.map(process_tree, trees)
+
+    for t_types, m_counts in results:
+        tissue_types.update(t_types)
+        for source, targets in m_counts.items():
+            for target, count in targets.items():
+                migration_counts[source][target] += count
+
+    # Create count matrix
+    tissue_list = sorted(tissue_types - {primary_tissue})
+    tissue_list.insert(0, primary_tissue)
+    n = len(tissue_list)
+    count_matrix = np.zeros((n, n))
+    for i, source in enumerate(tissue_list):
+        for j, target in enumerate(tissue_list):
+            count_matrix[i, j] = migration_counts[source][target]
+
+    # Calculate mutual information
+    P = count_matrix / np.sum(count_matrix)
+    p_x = np.sum(P, axis=1)
+    p_y = np.sum(P, axis=0)
+
+    MI = 0
+    for i in range(P.shape[0]):
+        for j in range(P.shape[1]):
+            if P[i, j] > 0:
+                MI += P[i, j] * np.log2(P[i, j] / (p_x[i] * p_y[j]))
+
+    H_x = -np.sum(p_x * np.log2(p_x, where=p_x > 0))
+    H_y = -np.sum(p_y * np.log2(p_y, where=p_y > 0))
+    mutual_info = (2 * MI) / (H_x + H_y)
+
+    # Save results if output files are provided
+    if output_file_matrix:
+        df = pd.DataFrame(count_matrix, index=tissue_list, columns=tissue_list)
+        df.to_csv(output_file_matrix)
+
+    if output_file_information:
+        with open(output_file_information, "w") as f:
+            f.write(str(mutual_info))
+
+    return mutual_info, count_matrix, tissue_list

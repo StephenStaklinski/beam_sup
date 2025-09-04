@@ -285,7 +285,7 @@ def test_ensure_output_dir(beam_results, tmp_path):
 
 def test_process_tree_for_consensus(beam_results):
     """Test the _process_tree_for_consensus function with a single tree."""
-    from beam_sup.formatting import _process_tree_for_consensus
+    from beam_sup.posterior_processing import _process_tree_for_consensus
     
     # Get a single tree from the beam_results
     tree = beam_results.trees[0]
@@ -302,7 +302,7 @@ def test_process_tree_for_consensus(beam_results):
 
 def test_process_tree_wrapper(beam_results):
     """Test the _process_tree_wrapper function."""
-    from beam_sup.formatting import _process_tree_wrapper
+    from beam_sup.posterior_processing import _process_tree_wrapper
     
     # Get a single tree from the beam_results
     tree = beam_results.trees[0]
@@ -330,7 +330,7 @@ def test_get_consensus_graph_with_burnin(beam_results):
 
 def test_sample_trees_with_output(beam_results, tmp_path):
     """Test sample_trees with output file generation."""
-    from beam_sup.formatting import sample_trees
+    from beam_sup.posterior_processing import sample_trees
     
     # Set output prefix
     output_prefix = os.path.join(tmp_path, "test_sampled_trees")
@@ -359,7 +359,7 @@ def test_sample_trees_with_output(beam_results, tmp_path):
 
 def test_get_all_posterior_metastasis_times_with_output(beam_results, tmp_path):
     """Test get_all_posterior_metastasis_times with output file generation."""
-    from beam_sup.formatting import get_all_posterior_metastasis_times
+    from beam_sup.posterior_processing import get_all_posterior_metastasis_times
     
     # Set output prefix
     output_prefix = os.path.join(tmp_path, "test_metastasis_times")
@@ -384,7 +384,7 @@ def test_get_all_posterior_metastasis_times_with_output(beam_results, tmp_path):
 
 def test_get_consensus_graph_invalid_input(beam_results):
     """Test get_consensus_graph with invalid input types."""
-    from beam_sup.formatting import get_consensus_graph
+    from beam_sup.posterior_processing import get_consensus_graph
     
     # Test with non-TreeList input
     with pytest.raises(ValueError, match="Trees must be a dendropy.TreeList object"):
@@ -397,7 +397,7 @@ def test_get_consensus_graph_invalid_input(beam_results):
 
 def test_sample_trees_node_labeling(beam_results):
     """Test sample_trees with nodes that have no labels."""
-    from beam_sup.formatting import sample_trees
+    from beam_sup.posterior_processing import sample_trees
     
     # Create a copy of the first tree
     tree = beam_results.trees[0].clone()
@@ -423,7 +423,7 @@ def test_sample_trees_node_labeling(beam_results):
 
 def test_get_all_posterior_metastasis_times_non_ultrametric(beam_results):
     """Test get_all_posterior_metastasis_times with non-ultrametric tree."""
-    from beam_sup.formatting import get_all_posterior_metastasis_times
+    from beam_sup.posterior_processing import get_all_posterior_metastasis_times
     
     # Create a copy of the first tree
     tree = beam_results.trees[0].clone()

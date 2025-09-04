@@ -15,17 +15,17 @@ from .plotting import (
     plot_metastasis_timing,
     plot_rate_matrix,
 )
-from .formatting import (
+from .posterior_processing import (
     get_consensus_graph,
     sample_trees,
     get_all_posterior_metastasis_times,
+    compute_posterior_mutual_info
 )
 from .config import (
     DEFAULT_BURNIN_PERCENT,
     DEFAULT_CORES,
     DEFAULT_MIN_PROB_THRESHOLD,
 )
-from .statistics import compute_posterior_mutual_info
 from .simulate import simulate_metastatic_cancer_population, overlay_simulated_crispr_barcode_data
 
 
