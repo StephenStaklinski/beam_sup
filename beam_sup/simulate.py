@@ -6,9 +6,12 @@ from cassiopeia.data import CassiopeiaTree
 from cassiopeia.sim import Cas9LineageTracingDataSimulator
 import shutil
 import subprocess
+import glob
+
+from .tree_utils import get_num_migrations_from_nwk_and_labeling
 
 
-def simulate_metastatic_cancer_population(outdir, num_generations=250, migration_rate="1e-6", num_cells_downsample=50, max_anatomical_sites=-1, seed=None):
+def simulate_metastatic_cancer_population(outdir, num_generations=250, migration_rate="1e-6", num_cells_downsample=50, max_anatomical_sites=-1, rerun_no_migrations=True, seed=None):
     """
     Simulates a metastatic cancer population using an external 'simulate' executable.
 
@@ -18,6 +21,7 @@ def simulate_metastatic_cancer_population(outdir, num_generations=250, migration
         migration_rate (str or float, optional): Migration rate between anatomical sites. Default is "1e-6".
         num_cells_downsample (int, optional): Number of cells to downsample in the output. Default is 50.
         max_anatomical_sites (int, optional): Maximum number of anatomical sites. Default is -1 (no limit).
+        rerun_no_migrations (bool, optional): If True, rerun the simulation if no migration events occured. Default is True.
         seed (int, optional): Random seed for reproducibility. If None, a random seed is generated.
 
     Raises:
@@ -54,6 +58,26 @@ def simulate_metastatic_cancer_population(outdir, num_generations=250, migration
     logfile = os.path.join(outprefix, f"{seed}_terminal.log")
     with open(logfile, "w") as logf:
         subprocess.run(cmd, check=True, stdout=logf, stderr=subprocess.STDOUT)
+        
+    if rerun_no_migrations:
+        # Check if migrations occurred by inspecting the migration graph files
+        # If no migrations, then repeat simulation
+        nwk = glob.glob(os.path.join(outprefix, "*.nwk"))[0]
+        labeling = glob.glob(os.path.join(outprefix, "*.vertex.labeling"))[0]
+        migrations = get_num_migrations_from_nwk_and_labeling(nwk, labeling)
+        if int(migrations) == 0:
+            print(f"No migrations detected in simulation with seed {seed}. Rerunning simulation.")
+            shutil.rmtree(outprefix)
+            # Rerun simulation with a new random seed
+            return simulate_metastatic_cancer_population(
+                outdir,
+                num_generations=num_generations,
+                migration_rate=migration_rate,
+                num_cells_downsample=num_cells_downsample,
+                max_anatomical_sites=max_anatomical_sites,
+                rerun_no_migrations=rerun_no_migrations,
+                seed=None
+            )
         
     return seed
     
