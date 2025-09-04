@@ -1,4 +1,3 @@
-"""Module for loading and parsing BEAM output files."""
 
 import os
 import pandas as pd

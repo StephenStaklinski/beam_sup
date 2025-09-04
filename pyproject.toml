@@ -19,7 +19,8 @@ dependencies = [
     "scipy>=1.5.0",
     "networkx>=3.0",
     "pydot>=1.4.2",
-    "PyQt5==5.15.9"
+    "PyQt5==5.15.9",
+    "cassiopeia-lineage @ git+https://github.com/YosefLab/Cassiopeia@master",
 ]
 requires-python = ">=3.8,<=3.12"
 readme = "README.md"
@@ -30,6 +31,9 @@ test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
 ]
+
+[project.scripts]
+run_met_cancer_barcode_simulation = "beam_sup.beam_sup:run_simulation"
 
 [project.urls]
 Homepage = "https://github.com/StephenStaklinski/beam_sup"

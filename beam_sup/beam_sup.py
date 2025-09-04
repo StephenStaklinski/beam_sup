@@ -1,16 +1,32 @@
-"""Main class for BEAM results analysis."""
 
+import argparse
 from typing import Optional, Dict, List, Union, Tuple
 import dendropy
 import numpy as np
 import pandas as pd
 import os
 
-from . import data_loader
-from . import plotting
-from . import formatting
-from . import config
-from . import statistics
+from .data_loader import load_beam_files
+from .plotting import (
+    plot_parameters,
+    plot_probability_graph,
+    plot_thresholded_graph,
+    plot_sampled_tree,
+    plot_metastasis_timing,
+    plot_rate_matrix,
+)
+from .formatting import (
+    get_consensus_graph,
+    sample_trees,
+    get_all_posterior_metastasis_times,
+)
+from .config import (
+    DEFAULT_BURNIN_PERCENT,
+    DEFAULT_CORES,
+    DEFAULT_MIN_PROB_THRESHOLD,
+)
+from .statistics import compute_posterior_mutual_info
+from .simulate import simulate_metastatic_cancer_population, overlay_simulated_crispr_barcode_data
 
 
 class BeamResults:
@@ -48,7 +64,7 @@ class BeamResults:
         self.log_file = log_file
         self.primary_tissue = primary_tissue
         self.total_time = total_time
-        self.trees, self.log_data = data_loader.load_beam_files(trees_file, log_file)
+        self.trees, self.log_data = load_beam_files(trees_file, log_file)
         self.consensus_graph = None
         self.metastasis_times = None
 
@@ -129,12 +145,12 @@ class BeamResults:
             parameter: Specific parameter to plot. If None, plots all parameters.
         """
         self._ensure_output_dir(output_file)
-        plotting.plot_parameters(self.log_data, output_file, parameter)
+        plot_parameters(self.log_data, output_file, parameter)
 
     def get_consensus_graph(
         self,
-        burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
-        cores: int = config.DEFAULT_CORES,
+        burnin_percent: float = DEFAULT_BURNIN_PERCENT,
+        cores: int = DEFAULT_CORES,
         output_file: Optional[str] = None,
         force_recompute: bool = False,
     ) -> Dict[str, float]:
@@ -156,7 +172,7 @@ class BeamResults:
 
         # Only compute consensus graph if not already computed or if force_recompute is True
         if self.consensus_graph is None or force_recompute:
-            self.consensus_graph = formatting.get_consensus_graph(
+            self.consensus_graph = get_consensus_graph(
                 self.trees, self.primary_tissue, burnin_percent, cores
             )
 
@@ -186,7 +202,7 @@ class BeamResults:
 
         self._ensure_output_dir(output_file)
 
-        plotting.plot_probability_graph(
+        plot_probability_graph(
             data=self.log_data,
             output_file=output_file,
             primary_tissue=self.primary_tissue,
@@ -211,7 +227,7 @@ class BeamResults:
 
         self._ensure_output_dir(output_file_prefix)
 
-        plotting.plot_thresholded_graph(
+        plot_thresholded_graph(
             data=self.log_data,
             output_file_prefix=output_file_prefix,
             primary_tissue=self.primary_tissue,
@@ -246,7 +262,7 @@ class BeamResults:
         if output_file_information:
             self._ensure_output_dir(output_file_information)
 
-        return statistics.compute_posterior_mutual_info(
+        return compute_posterior_mutual_info(
             trees=self.trees,
             primary_tissue=self.primary_tissue,
             threads=threads,
@@ -258,7 +274,7 @@ class BeamResults:
         self,
         n: int = 1,
         output_prefix: str = None,
-        burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
+        burnin_percent: float = DEFAULT_BURNIN_PERCENT,
     ) -> None:
         """
         Sample trees from the posterior and plot them with their migration graphs.
@@ -271,13 +287,13 @@ class BeamResults:
         self._ensure_output_dir(output_prefix)
 
         # Sample trees
-        sampled_trees = formatting.sample_trees(
+        sampled_trees = sample_trees(
             self.trees, n=n, burnin_percent=burnin_percent, output_prefix=output_prefix
         )
 
         # Plot each tree
         for i, tree in enumerate(sampled_trees, 1):
-            plotting.plot_sampled_tree(
+            plot_sampled_tree(
                 newick_str=tree,
                 primary_tissue=self.primary_tissue,
                 total_time=self.total_time,
@@ -287,8 +303,8 @@ class BeamResults:
 
     def get_metastasis_times(
         self,
-        burnin_percent: float = config.DEFAULT_BURNIN_PERCENT,
-        min_prob_threshold: float = config.DEFAULT_MIN_PROB_THRESHOLD,
+        burnin_percent: float = DEFAULT_BURNIN_PERCENT,
+        min_prob_threshold: float = DEFAULT_MIN_PROB_THRESHOLD,
         output_prefix: str = None,
         force_recompute: bool = False,
     ) -> Dict[str, Dict[str, Tuple[float, float]]]:
@@ -312,7 +328,7 @@ class BeamResults:
         # Only compute metastasis times if not already computed or if force_recompute is True
         if self.metastasis_times is None or force_recompute:
             # Get metastasis times
-            self.metastasis_times = formatting.get_all_posterior_metastasis_times(
+            self.metastasis_times = get_all_posterior_metastasis_times(
                 self.trees,
                 total_time=self.total_time,
                 primary_tissue=self.primary_tissue,
@@ -325,7 +341,7 @@ class BeamResults:
             self.get_consensus_graph()
 
         # Plot metastasis timing
-        plotting.plot_metastasis_timing(
+        plot_metastasis_timing(
             met_times=self.metastasis_times,
             consensus_graph=self.consensus_graph,
             origin_time=self.total_time,
@@ -344,8 +360,55 @@ class BeamResults:
             output_file: Path to save the plot
         """
         self._ensure_output_dir(output_file)
-        plotting.plot_rate_matrix(
+        plot_rate_matrix(
             data=self.log_data,
             output_file=output_file,
             primary_tissue=self.primary_tissue,
         )
+
+
+def run_simulation():
+
+    parser = argparse.ArgumentParser(
+        description="Run metastatic cancer population simulation and overlay CRISPR barcode data."
+    )
+    parser.add_argument("--outdir", default="./", help="Output directory for simulation results.")
+    parser.add_argument("--num_generations", type=int, default=250, help="Number of generations to simulate.")
+    parser.add_argument("--migration_rate", type=str, default="1e-6", help="Migration rate between anatomical sites.")
+    parser.add_argument("--num_cells_downsample", type=int, default=50, help="Number of cells to downsample.")
+    parser.add_argument("--max_anatomical_sites", type=int, default=-1, help="Maximum number of anatomical sites.")
+    parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility.")
+    parser.add_argument("--num_sites", type=int, default=50, help="Number of CRISPR cassettes (cuts) to simulate.")
+    parser.add_argument("--mutationrate", type=float, default=0.1, help="Mutation rate per cassette.")
+
+    args = parser.parse_args()
+
+    # Run the cancer population simulation
+    seed = simulate_metastatic_cancer_population(
+            outdir=args.outdir,
+            num_generations=args.num_generations,
+            migration_rate=args.migration_rate,
+            num_cells_downsample=args.num_cells_downsample,
+            max_anatomical_sites=args.max_anatomical_sites,
+            seed=args.seed
+        )
+        
+
+    # Find the ground truth tree file
+    seed_dir = os.path.join(args.outdir, str(seed))
+    ground_truth_tree = None
+    if os.path.isdir(seed_dir):
+        for fname in os.listdir(seed_dir):
+            if fname.endswith(".nwk"):
+                ground_truth_tree = os.path.join(seed_dir, fname)
+                break
+    if ground_truth_tree is None:
+        raise FileNotFoundError(f"Ground truth tree file (.nwk) not found in {seed_dir}.")
+
+    # Overlay simulated CRISPR barcode data
+    overlay_simulated_crispr_barcode_data(
+        ground_truth_tree_filepath=ground_truth_tree,
+        outprefix=os.path.join(seed_dir, str(seed)),
+        num_sites=args.num_sites,
+        mutationrate=args.mutationrate,
+    )

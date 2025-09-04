@@ -8,7 +8,7 @@ A Python package for analyzing [BEAM (Bayesian Evolutionary Analysis of Metastas
 
 ## Installation
 
-You can install the package using pip:
+You can install the main python package using pip:
 
 ```bash
 git clone https://github.com/StephenStaklinski/beam_sup.git
@@ -16,14 +16,36 @@ cd beam_sup
 pip install -e .
 ```
 
+If you want to use the simulation related functionalities, then you must compile the `simulate` executable that relies on a c++ code base for efficient agent based model generation of a metastatic cancer population. To compile this executable, obtain a gcc compiler if you do not already have one available and then run the following from within `beam_sup/simulator_cpp`:
+```
+mkdir build
+cd build
+cmake ..
+make
+```
 
-## Basic Usage
+The compilation does rely on [LEMON](https://lemon.cs.elte.hu/trac/lemon) that should be handled by the provided pre-installed package, or otherwise can be installed from source and the `CMakeLists.txt` updated to find the correct path.
+
+This should produce an executable file at `./beam_sup/simulator_cpp/build/simulate` which is essential for the simulation process and needs to be added to your `PATH` to access it from within the python package functions. It is also possible to just use this agent based model directly without the crispr barcode overlay if desired, just run `simulate --help` to see the options. 
+
+
+## Testing
+
+```bash
+# Install the package with test dependencies
+pip install -e ".[test]"
+
+# Run all tests
+pytest --cov=beam_sup --cov-report=term-missing
+```
+
+## Basic usage for interpreting BEAM results
 
 ```python
-import beam_sup
+from beam_sup import BeamResults
 
 # Initialize with BEAM output files
-results = beam_sup.BeamResults(
+results = BeamResults(
     "examples/data/example.trees", 
     "examples/data/example.log", 
     primary_tissue="LL",
@@ -86,15 +108,13 @@ metastasis_times = results.get_metastasis_times(
 )
 ```
 
-## Testing
+## Basic usage for simulating data
 
-```bash
-# Install the package with test dependencies
-pip install -e ".[test]"
-
-# Run all tests
-pytest --cov=beam_sup --cov-report=term-missing
+To simulate metastatic cancer data with overlayed crispr barcode data after installing the package, check that you have the executable available with `which run_met_cancer_barcode_simulation` and then run the following in the terminal for a default simulation run:
 ```
+run_met_cancer_barcode_simulation
+```
+To view options to modify the simulation run from defaults, then run `run_met_cancer_barcode_simulation --help`.
 
 ## License
 

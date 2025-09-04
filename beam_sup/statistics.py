@@ -1,4 +1,3 @@
-"""Functions for statistical analysis of migration patterns."""
 
 import numpy as np
 from typing import Optional, Dict, List, Union, Tuple
