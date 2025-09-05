@@ -1,10 +1,11 @@
+import os
 from typing import Optional, Dict, List, Union, Tuple
 from copy import deepcopy
 from multiprocessing import Pool
 import dendropy
 from ete3 import Tree
 import random
-import pickle
+import pickle as pkl
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -289,7 +290,7 @@ def get_all_posterior_metastasis_times(
     if output_prefix:
         output_file = f"{output_prefix}.pkl"
         with open(output_file, "wb") as f:
-            pickle.dump(all_met_events, f)
+            pkl.dump(all_met_events, f)
 
     return all_met_events
 
@@ -385,3 +386,154 @@ def compute_posterior_mutual_info(
             f.write(str(mutual_info))
 
     return mutual_info, count_matrix, tissue_list
+
+
+def get_consensus_times_and_classifications(
+    file_path: str, origin_tissue: str, consensus_threshold: float, outprefix: str
+) -> None:
+    """
+    Calculate consensus migration times and classifications from posterior metastasis times.
+
+    Args:
+        file_path (str): Path to the pickle file containing posterior metastasis times.
+        origin_tissue (str): Name of the origin tissue.
+        consensus_threshold (float): Threshold for consensus classification (between 0 and 1).
+        outprefix (str): Prefix for output files.
+    """
+    with open(file_path, "rb") as file:
+        met_times = pkl.load(file)
+
+    # Get a dict mapping each migration to the time it occurred across all posterior samples
+    expected_migration_times_all = {}
+
+    primary_to_met = 0
+    met_to_met = 0
+    met_to_primary = 0
+    for graph in met_times.values():
+
+        # Only record binary classifications per graph sample
+        pm = False
+        mm = False
+        mp = False
+
+        for migration, time in graph.items():
+
+            middle_time = (time[0] + time[1]) / 2
+
+            # track expected migration times
+            if migration not in expected_migration_times_all:
+                expected_migration_times_all[migration] = []
+            expected_migration_times_all[migration].append(middle_time)
+
+            # get classifications
+            source, recipient = migration.split("_")[0:2]
+            if source == origin_tissue and pm == False:
+                primary_to_met += 1
+                pm = True
+            elif recipient == origin_tissue and mp == False:
+                met_to_primary += 1
+                mp = True
+            elif source != origin_tissue and recipient != origin_tissue and mm == False:
+                met_to_met += 1
+                mm = True
+
+    # find only the edges above the consensus threshold and get the expected time for each migration
+    total_graphs = len(met_times)
+    expected_migration_times_all = {
+        k: v
+        for k, v in expected_migration_times_all.items()
+        if len(v) / total_graphs > consensus_threshold
+    }
+
+    # Merge edges for the same source and recipient to ignore the multiedge aspect
+    expected_migration_times_no_multiedge = {}
+    for migration, time in expected_migration_times_all.items():
+        no_multiedge = "_".join(migration.split("_")[0:2])
+        if no_multiedge not in expected_migration_times_no_multiedge:
+            expected_migration_times_no_multiedge[no_multiedge] = []
+        expected_migration_times_no_multiedge[no_multiedge].extend(time)
+
+    expected_migration_times_all = {
+        k: np.mean(v) for k, v in expected_migration_times_all.items()
+    }
+    expected_migration_times_no_multiedge = {
+        k: np.mean(v) for k, v in expected_migration_times_no_multiedge.items()
+    }
+
+    # get the consensus classifications
+    p_to_m = (primary_to_met / total_graphs) > consensus_threshold
+    m_to_m = (met_to_met / total_graphs) > consensus_threshold
+    m_to_p = (met_to_primary / total_graphs) > consensus_threshold
+
+    # write out the expected migration times
+    consensus_threshold = int(consensus_threshold * 100)
+    outname = os.path.basename(outprefix)
+    with open(
+        outprefix + f"_expected_migration_times_no_multiedge_{consensus_threshold}.csv",
+        "w",
+    ) as file:
+        file.write("name,source_recipient,mid_time\n")
+        for migration, time in expected_migration_times_no_multiedge.items():
+            file.write(f"{outname},{migration},{time}\n")
+
+    with open(
+        outprefix + f"_expected_migration_times_all_{consensus_threshold}.csv", "w"
+    ) as file:
+        file.write("name,source_recipient_multiedgeNum,mid_time\n")
+        for migration, time in expected_migration_times_all.items():
+            file.write(f"{outname},{migration},{time}\n")
+
+    # write out the consensus classifications
+    with open(
+        outprefix + f"_consensus_classifications_{consensus_threshold}.csv", "w"
+    ) as file:
+        file.write("name,met_to_met,met_to_primary\n")
+        file.write(f"{outname},{m_to_m},{m_to_p}")
+
+
+def sample_beast_trees_and_append_tissue_to_names(
+    nexus_file: str, outdir: str, num_samples: int = 10
+) -> None:
+    """
+    Sample 10 trees from the last 50% of the trees in a BEAST nexus file,
+    and for each tree, append the tissue annotation to each node name in the format tissue.currentname.
+    Save each modified tree as a newick file in the specified output directory.
+    """
+    # Read trees from nexus file
+    tree_collection = dendropy.TreeList.get_from_path(nexus_file, schema="nexus")
+    trees = list(tree_collection)
+
+    # Discard first 50% of trees
+    half_point = len(trees) // 2
+    remaining_trees = trees[half_point:]
+
+    # Sample trees from the remaining 50%
+    sampled_trees = random.sample(remaining_trees, num_samples)
+
+    # Process each sampled tree to get a newick with tissue annotations appended to node names
+    for i, tree in enumerate(sampled_trees, 1):
+        j = 0
+        for node in tree.nodes():
+            if node.is_leaf():
+                continue
+            else:
+                tissue_label = (
+                    str(node.annotations["location"].value)
+                    .split("location=")[-1]
+                    .replace("'", "")
+                )
+                # Set node name to tissue.currentname format
+                current_name = node.label
+                if current_name != None:
+                    new_name = f"{tissue_label}.{current_name}"
+                    node.label = new_name
+                else:
+                    new_name = f"{tissue_label}.node_{j}"
+                    node.label = new_name
+                    j += 1
+
+        # Write to newick file
+        outfile = os.path.join(
+            outdir, f"sampled_tree_{i}_with_tissue_appended_to_name.nwk"
+        )
+        tree.write(path=outfile, schema="newick", suppress_internal_node_labels=False)
