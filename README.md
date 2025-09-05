@@ -116,6 +116,10 @@ run_met_cancer_barcode_simulation
 ```
 To view options to modify the simulation run from defaults, then run `run_met_cancer_barcode_simulation --help`.
 
+## Basic usage for other functions
+
+There are many other functions available, most of which are called by seperate analysis pipelines in producing results for the BEAM methods paper. These functions just need to be imported explicitly such as `from beam_sup.module import function` where module is the name of the script in `beam_sup/` with the function wanted.
+
 ## License
 
 This project is licensed under the MIT License.

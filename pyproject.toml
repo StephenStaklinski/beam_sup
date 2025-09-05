@@ -10,7 +10,7 @@ authors = [
     {name = "Stephen Staklinski", email = "staklins@cshl.edu"},
 ]
 dependencies = [
-    "black",
+    "biopython",
     "ete3==3.1.3",
     "pandas>=2.0.0",
     "dendropy>=4.5.2",
@@ -21,7 +21,7 @@ dependencies = [
     "networkx>=3.0",
     "pydot>=1.4.2",
     "PyQt5==5.15.9",
-    "cassiopeia-lineage @ git+https://github.com/YosefLab/Cassiopeia@master",
+    "cassiopeia-lineage @ git+https://github.com/YosefLab/Cassiopeia@master"
 ]
 requires-python = ">=3.8,<=3.12"
 readme = "README.md"

@@ -1,4 +1,4 @@
-import ete3
+
 import sys
 from Bio import Phylo
 from ete3 import Tree
@@ -63,7 +63,7 @@ def get_num_migrations_from_nwk_and_labeling(nwk: str, labeling_tsv: str) -> int
             node_to_tissue[str(node)] = str(tissue)
 
     # Read the tree
-    tree = ete3.Tree(nwk, format=1)
+    tree = Tree(nwk, format=1)
 
     # Count migrations by tree traversal
     migrations = 0
@@ -101,7 +101,7 @@ def get_mig_comig_counts_and_topologies_from_nwk(
             - clonality (str): "Monoclonal" if no multi-edges, "Polyclonal" otherwise.
     """
 
-    tree = ete3.Tree(newick, format=8)
+    tree = Tree(newick, format=8)
 
     root = tree.get_tree_root()
     if not root.name:
