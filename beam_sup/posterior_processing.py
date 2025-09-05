@@ -1,4 +1,3 @@
-
 from typing import Optional, Dict, List, Union, Tuple
 from copy import deepcopy
 from multiprocessing import Pool
@@ -82,7 +81,7 @@ def get_consensus_graph(
     """
     if not isinstance(trees, dendropy.TreeList):
         raise ValueError("Trees must be a dendropy.TreeList object")
-        
+
     if len(trees) == 0:
         raise ValueError("No trees to analyze")
 

@@ -10,6 +10,7 @@ authors = [
     {name = "Stephen Staklinski", email = "staklins@cshl.edu"},
 ]
 dependencies = [
+    "black",
     "ete3==3.1.3",
     "pandas>=2.0.0",
     "dendropy>=4.5.2",

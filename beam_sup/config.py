@@ -1,4 +1,3 @@
-
 # File parsing settings
 DEFAULT_BURNIN_PERCENT = 0.0
 DEFAULT_CORES = 1

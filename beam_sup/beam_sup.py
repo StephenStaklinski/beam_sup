@@ -1,4 +1,3 @@
-
 import argparse
 from typing import Optional, Dict, List, Union, Tuple
 import dendropy
@@ -19,14 +18,17 @@ from .posterior_processing import (
     get_consensus_graph,
     sample_trees,
     get_all_posterior_metastasis_times,
-    compute_posterior_mutual_info
+    compute_posterior_mutual_info,
 )
 from .config import (
     DEFAULT_BURNIN_PERCENT,
     DEFAULT_CORES,
     DEFAULT_MIN_PROB_THRESHOLD,
 )
-from .simulate import simulate_metastatic_cancer_population, overlay_simulated_crispr_barcode_data
+from .simulate import (
+    simulate_metastatic_cancer_population,
+    overlay_simulated_crispr_barcode_data,
+)
 
 
 class BeamResults:
@@ -45,12 +47,8 @@ class BeamResults:
                 os.makedirs(output_dir, exist_ok=True)
 
     def __init__(
-        self, 
-        trees_file: str, 
-        log_file: str, 
-        primary_tissue: str, 
-        total_time: float
-    ):
+        self, trees_file: str, log_file: str, primary_tissue: str, total_time: float
+    ) -> None:
         """
         Initialize BeamResults with BEAM output files.
 
@@ -372,27 +370,57 @@ def run_simulation():
     parser = argparse.ArgumentParser(
         description="Run metastatic cancer population simulation and overlay CRISPR barcode data."
     )
-    parser.add_argument("--outdir", default="./", help="Output directory for simulation results.")
-    parser.add_argument("--num_generations", type=int, default=250, help="Number of generations to simulate.")
-    parser.add_argument("--migration_rate", type=str, default="1e-6", help="Migration rate between anatomical sites.")
-    parser.add_argument("--num_cells_downsample", type=int, default=50, help="Number of cells to downsample.")
-    parser.add_argument("--max_anatomical_sites", type=int, default=-1, help="Maximum number of anatomical sites.")
-    parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility.")
-    parser.add_argument("--num_sites", type=int, default=50, help="Number of CRISPR cassettes (cuts) to simulate.")
-    parser.add_argument("--mutationrate", type=float, default=0.1, help="Mutation rate per cassette.")
+    parser.add_argument(
+        "--outdir", default="./", help="Output directory for simulation results."
+    )
+    parser.add_argument(
+        "--num_generations",
+        type=int,
+        default=250,
+        help="Number of generations to simulate.",
+    )
+    parser.add_argument(
+        "--migration_rate",
+        type=str,
+        default="1e-6",
+        help="Migration rate between anatomical sites.",
+    )
+    parser.add_argument(
+        "--num_cells_downsample",
+        type=int,
+        default=50,
+        help="Number of cells to downsample.",
+    )
+    parser.add_argument(
+        "--max_anatomical_sites",
+        type=int,
+        default=-1,
+        help="Maximum number of anatomical sites.",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None, help="Random seed for reproducibility."
+    )
+    parser.add_argument(
+        "--num_sites",
+        type=int,
+        default=50,
+        help="Number of CRISPR cassettes (cuts) to simulate.",
+    )
+    parser.add_argument(
+        "--mutationrate", type=float, default=0.1, help="Mutation rate per cassette."
+    )
 
     args = parser.parse_args()
 
     # Run the cancer population simulation
     seed = simulate_metastatic_cancer_population(
-            outdir=args.outdir,
-            num_generations=args.num_generations,
-            migration_rate=args.migration_rate,
-            num_cells_downsample=args.num_cells_downsample,
-            max_anatomical_sites=args.max_anatomical_sites,
-            seed=args.seed
-        )
-        
+        outdir=args.outdir,
+        num_generations=args.num_generations,
+        migration_rate=args.migration_rate,
+        num_cells_downsample=args.num_cells_downsample,
+        max_anatomical_sites=args.max_anatomical_sites,
+        seed=args.seed,
+    )
 
     # Find the ground truth tree file
     seed_dir = os.path.join(args.outdir, str(seed))
@@ -403,7 +431,9 @@ def run_simulation():
                 ground_truth_tree = os.path.join(seed_dir, fname)
                 break
     if ground_truth_tree is None:
-        raise FileNotFoundError(f"Ground truth tree file (.nwk) not found in {seed_dir}.")
+        raise FileNotFoundError(
+            f"Ground truth tree file (.nwk) not found in {seed_dir}."
+        )
 
     # Overlay simulated CRISPR barcode data
     overlay_simulated_crispr_barcode_data(

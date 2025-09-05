@@ -1,4 +1,3 @@
-
 import os
 import pandas as pd
 import dendropy
@@ -43,7 +42,7 @@ def load_log_file(log_file: str) -> pd.DataFrame:
     try:
         log_data = pd.read_csv(log_file, sep="\t", comment="#")
 
-        required_columns = ['Sample', 'posterior', 'likelihood', 'prior']
+        required_columns = ["Sample", "posterior", "likelihood", "prior"]
         if not all(col in log_data.columns for col in required_columns):
             raise ValueError("Log file missing required columns")
     except Exception as e:

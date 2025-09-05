@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 import matplotlib
 
@@ -20,7 +19,7 @@ from .config import (
     DEFAULT_NODE_STYLES,
     DEFAULT_PLOT_STYLES,
     DEFAULT_MIN_PROB_THRESHOLD,
-    DEFAULT_TREE_STYLE
+    DEFAULT_TREE_STYLE,
 )
 
 
@@ -334,9 +333,7 @@ def plot_sampled_tree(
         ax.tick_params(axis="x", labelsize=DEFAULT_FONT_SIZE)
 
         handles = [
-            plt.Line2D(
-                [0], [0], color=color, lw=DEFAULT_PLOT_STYLES["linewidth"]
-            )
+            plt.Line2D([0], [0], color=color, lw=DEFAULT_PLOT_STYLES["linewidth"])
             for color in custom_colors.values()
         ]
         ax.legend(
@@ -371,9 +368,7 @@ def plot_sampled_tree(
                 CircleFace(DEFAULT_NODE_STYLES["size"], custom_colors[tissue]),
                 column=0,
             )
-            ts.legend.add_face(
-                TextFace(tissue, fsize=DEFAULT_FONT_SIZE), column=1
-            )
+            ts.legend.add_face(TextFace(tissue, fsize=DEFAULT_FONT_SIZE), column=1)
 
     # Set node styles
     for node in origin.traverse():
@@ -613,20 +608,22 @@ def plot_rate_matrix(
 
     if len(tissue_rate_col_names) == 0:
         raise ValueError("No tissue substitution rate columns found in log data")
-    
+
     # Get unique tissues
     tissues = list(
         set(
             [
                 tissue
                 for name in tissue_rate_col_names
-                for tissue in name.replace("tissueSubstModelLogger.relGeoRate_", "").split(
-                    "_"
-                )
+                for tissue in name.replace(
+                    "tissueSubstModelLogger.relGeoRate_", ""
+                ).split("_")
             ]
         )
     )
-    tissues = [primary_tissue] + sorted([tis for tis in tissues if tis != primary_tissue])
+    tissues = [primary_tissue] + sorted(
+        [tis for tis in tissues if tis != primary_tissue]
+    )
 
     # Create rate matrix
     num_tissues = len(tissues)
@@ -636,7 +633,9 @@ def plot_rate_matrix(
         for recipient in tissues:
             if source == recipient:
                 continue
-            rate = data[f'tissueSubstModelLogger.relGeoRate_{source}_{recipient}'].mean()
+            rate = data[
+                f"tissueSubstModelLogger.relGeoRate_{source}_{recipient}"
+            ].mean()
             i = tissues.index(source)
             j = tissues.index(recipient)
             rate_matrix[i, j] = rate
