@@ -28,17 +28,6 @@ The compilation does rely on [LEMON](https://lemon.cs.elte.hu/trac/lemon) that s
 
 This should produce an executable file at `./beam_sup/simulator_cpp/build/simulate` which is essential for the simulation process and needs to be added to your `PATH` to access it from within the python package functions. It is also possible to just use this agent based model directly without the crispr barcode overlay if desired, just run `simulate --help` to see the options. 
 
-
-## Testing
-
-```bash
-# Install the package with test dependencies
-pip install -e ".[test]"
-
-# Run all tests
-pytest --cov=beam_sup --cov-report=term-missing
-```
-
 ## Basic usage for interpreting BEAM results
 
 ```python
