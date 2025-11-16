@@ -67,6 +67,9 @@ public:
   
   /// Build cell Tree from final living cells and total allCells map
   void constructCellTree();
+
+  /// Resolve polytomies in the cell tree
+  void resolvePolytomies(Digraph& cellTree, Node root, StringNodeMap& cellLabels, StringNodeMap& cellAnatomicalSites);
   
 private:
   /// Map from set of driver mutations to carrying capacity
@@ -161,8 +164,6 @@ private:
     return result;
   }
   
-  
-private:
   /// Maximum number of cells
   const int _maxGenerations;
   /// Migration graph;
@@ -227,6 +228,8 @@ private:
   std::vector<std::vector<double>> _migrationTransitionProbs;
   // Vector to track existing tissue sites
   IntSet _existingSites;
+  /// Whether to resolve polytomies in the cell tree
+  bool _resolvePolytomies;
   };
 
 #endif

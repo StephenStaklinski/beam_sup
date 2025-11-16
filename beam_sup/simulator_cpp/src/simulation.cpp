@@ -39,6 +39,7 @@ Simulation::Simulation(double K,
   , _migrationTransitionProbs(migrationTransitionProbs)
   , _existingSites()
   , _anatomicalSiteLabel()
+  , _resolvePolytomies(true)
 {}
 
 Simulation::~Simulation()
@@ -160,13 +161,14 @@ void Simulation::updateAnatomicalSiteFactors()
     }
   }
 
-  // Remove dead anatomical sites and warn if migration events are lost
+  // Remove dead anatomical sites
   for (auto s : sitesToErase) {
     _existingSites.erase(s);
     Node v = _indexToVertexG[s];
-    if (lemon::countOutArcs(_G, v) > 0) {
-      std::cout << "WARNING: Migration events with site " << s << " are lost since it died." << std::endl;
-    }
+    // Warn if migration events are lost
+    // if (lemon::countOutArcs(_G, v) > 0) {
+    //   std::cout << "WARNING: Migration events with site " << s << " are lost since it died." << std::endl;
+    // }
     _G.erase(v);
   }
 }
@@ -229,7 +231,7 @@ void Simulation::migrate()
     // Determine number of cells to migrate (at least 1, up to available cells)
     int migrationCount = std::min(1 + poisson(g_rng), nrExtantCells_s);
 
-    std::cout << "\tMigration of " << migrationCount << " cells from " << s << " to " << t << std::endl;
+    // std::cout << "\tMigration of " << migrationCount << " cells from " << s << " to " << t << std::endl;
 
     // Draw cells to migrate, proportionally per driver mutation group
     IntVector migrationVector = draw(s, migrationCount); // migrationVector[idx] = number of cells to migrate from group idx
@@ -280,20 +282,22 @@ bool Simulation::simulate()
   {
 
     // Logging
-    std::cout << "Generation: " << _generation
+    if (_generation % 25 == 0 || _generation == 0) {
+      std::cout << "Generation: " << _generation
           << ", Total cells: " << _nrExtantCells
           << ", Active anatomical sites: " << _nrActiveAnatomicalSites
           << std::endl;
+    }
 
     // Check generation and anatomical site limits to see if we should stop the simulation
     if (_maxGenerations != -1 && _generation >= _maxGenerations)
     {
-      std::cout << "Maximum number of generations reached" << std::endl;
+      std::cout << "Maximum number of generations reached." << std::endl;
       break;
     }
     if (_maxNrAnatomicalSites != -1 && _nrActiveAnatomicalSites >= _maxNrAnatomicalSites)
     {
-      std::cout << "Maximum number of active anatomical sites reached" << std::endl;
+      std::cout << "Maximum number of active anatomical sites reached." << std::endl;
       break;
     }
 
@@ -463,14 +467,17 @@ bool Simulation::simulate()
 
     if (!_isActiveAnatomicalSite.at(0))
     {
-      std::cerr << "No primary!" << std::endl;
+      // Fail simulation because the primary tissue no longer exists
+      std::cerr << "No primary." << std::endl;
       return false;
     }
 
+    std::cout << "Building cell tree." << std::endl;
     constructCellTree();
     return true;
   }
-  // No tumor exists, return false
+  // Fail simulation because all cells died so no tumor exists
+  std::cout << "Tumor died." << std::endl;
   return false;
 }
 
@@ -523,6 +530,73 @@ MigrationGraph Simulation::getMigrationGraph() const
   // Return the migration graph object
   return MigrationGraph(filteredGraph, filteredRoot, filteredLabels);
 }
+
+
+void Simulation::resolvePolytomies(
+    Digraph& tree,
+    Node root,
+    StringNodeMap& labels,
+    StringNodeMap& anatomical
+) {
+    // Collect all nodes in the tree
+    std::vector<Node> nodes;
+    for (NodeIt v(tree); v != lemon::INVALID; ++v) {
+      nodes.push_back(v);
+    }
+
+    for (Node v : nodes) {
+        // Collect all children for this node
+        std::vector<Node> children;
+        for (OutArcIt a(tree, v); a != lemon::INVALID; ++a) {
+          children.push_back(tree.target(a));
+        }
+
+        if (children.size() <= 2) {
+            continue; // No polytomy to resolve, so skip this node
+        }
+
+        // Log when a polytomy is found
+        std::cout << "Resolving polytomy at node " << labels[v] << " with " << children.size() << " children." << std::endl;
+
+        // Extract original polytomy parent label and tissue
+        std::string parentLabel = labels[v];
+        std::string parentTissue = anatomical[v];
+
+        // Remove all original children from the parent polytomy node
+        for (OutArcIt a(tree, v); a != lemon::INVALID; ) {
+            OutArcIt next = a; ++next;
+            tree.erase(a);
+            a = next;
+        }
+
+        // Use the first child to start the binary resolution chain
+        Node firstChild  = children[0];
+        tree.addArc(v, firstChild);
+
+        // Build chain of dummy nodes for the remaining children
+        Node current = v;
+        int dummyCount = 1;
+
+        for (size_t i = 1; i < children.size(); i++) {
+            Node child = children[i];
+
+            // Create dummy node
+            Node dummy = tree.addNode();
+            std::string dummyLabel = parentLabel + "dummy" + std::to_string(dummyCount);
+            labels[dummy] = dummyLabel; // inherit parent's label with dummy suffix
+            anatomical[dummy] = parentTissue;  // inherit parent's anatomical site
+
+            // Add binary structure
+            tree.addArc(current, dummy);
+            tree.addArc(dummy, child);
+
+            // Move down the chain
+            current = dummy;
+            dummyCount++;
+        }
+    }
+}
+
 
 
 // Constructs the cell lineage tree for sampled extant cells, labels nodes, and updates global pointers
@@ -591,7 +665,7 @@ void Simulation::constructCellTree() {
     }
   }
 
-  // Collapse nodes with a single child to simplify the tree
+  // Collapse nodes with a single child to clean up the tree
   std::vector<Node> nodesToRemove;
   std::vector<int> idsToRemove;
   for (const auto& pair : idNodeMap) {
@@ -619,9 +693,14 @@ void Simulation::constructCellTree() {
       cellAnatomicalSites[node] = _anatomicalSiteLabel.at(_idCellMap.at(id).getAnatomicalSite());
     } else {
       int parentID = tipToParentID.at(id);
-      cellLabels[node] = std::to_string(parentID) + "_sampled";
+      cellLabels[node] = std::to_string(parentID) + "sampled";
       cellAnatomicalSites[node] = _anatomicalSiteLabel.at(_idCellMap.at(parentID).getAnatomicalSite());
     }
+  }
+
+  // Resolve polytomies if requested
+  if (_resolvePolytomies) {
+      resolvePolytomies(cellTree, root, cellLabels, cellAnatomicalSites);
   }
 
   // Update global cell tree pointer
@@ -641,40 +720,12 @@ void Simulation::constructCellTree() {
     }
     _cellVertexLabeling->set(v, cellAnatomicalSites[idNodeMap[id]]);
   }
-
-  // Output observable cell mutations for sampled clones (used for clone collapsing)
-  std::vector<std::string> usedClones;
-  for (int s : _existingSites) {
-    if (!_isActiveAnatomicalSite.at(s)) continue;
-    for (const auto& kv : _extantCellsByDrivers.at(s)) {
-      for (const Cell& cell : kv.second) {
-        int id = cell.getID();
-        if (idNodeMap.find(id) != idNodeMap.end()) {
-          IntSet allMutations = kv.first;
-          allMutations.insert(cell.getPassengerMutations().begin(), cell.getPassengerMutations().end());
-          IntSet Z;
-          std::set_intersection(observableMutations.begin(), observableMutations.end(),
-                                allMutations.begin(), allMutations.end(),
-                                std::inserter(Z, Z.begin()));
-          std::string mutationString;
-          for (auto it = Z.begin(); it != Z.end(); ++it) {
-            mutationString += std::to_string(_cellTreeMutationToObservableMutation[*it]);
-            if (std::next(it) != Z.end()) mutationString += "/";
-          }
-          if (!mutationString.empty() &&
-              std::find(usedClones.begin(), usedClones.end(), mutationString) == usedClones.end()) {
-            usedClones.push_back(mutationString);
-          }
-        }
-      }
-    }
-  }
 }
 
 // Writes the Tree in Newick format to the provided output stream
 // Branch lengths are calculated using generation times / cell divisions
-void Simulation::writeNewick(std::ostream& os, const Tree* pCloneT, const IntIntMap& mutationToGenerationNumber) const {
-  const Digraph& tree = pCloneT->tree();
+void Simulation::writeNewick(std::ostream& os, const Tree* pCellT, const IntIntMap& mutationToGenerationNumber) const {
+  const Digraph& tree = pCellT->tree();
 
   // Helper to parse mutation IDs from a label string
   auto parseMutations = [](const std::string& label) -> std::vector<int> {
@@ -690,7 +741,7 @@ void Simulation::writeNewick(std::ostream& os, const Tree* pCloneT, const IntInt
 
   // Recursive function to traverse the tree and write Newick format
   std::function<void(Digraph::Node, int)> traverse = [&](Digraph::Node node, int parent_time) {
-    const std::string label = pCloneT->label(node);
+    const std::string label = pCellT->label(node);
 
     // Determine generation time for this node
     int node_time = parent_time;
@@ -723,7 +774,7 @@ void Simulation::writeNewick(std::ostream& os, const Tree* pCloneT, const IntInt
   };
 
   // Start traversal from the root node
-  Digraph::Node rootNode = pCloneT->root();
+  Digraph::Node rootNode = pCellT->root();
   traverse(rootNode, 0);
   os << ";" << std::endl;
 }

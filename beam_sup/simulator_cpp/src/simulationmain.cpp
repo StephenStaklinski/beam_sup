@@ -172,35 +172,38 @@ int main(int argc, char** argv)
   // Repeat simulation if it fails (e.g., all cells die)
   bool run = true;
   while (run == true) {
-  // Set random seed
-  g_rng = std::mt19937(seed);
+    // Set random seed
+    g_rng = std::mt19937(seed);
 
-  // Create simulation object with parameters
-  Simulation simulation(K,
-             migrationRates,
-             mutationRate,
-             driverProb,
-             mutFreqThreshold,
-             maxNrAnatomicalSites,
-             maxGenerations,
-             downsampleCellNumber,
-             migrationTransitionProbs);
+    std::cout << "Starting simulation with seed " << seed << "." << std::endl;
 
-  // Run simulation
-  if (simulation.simulate())
-  {
-    // Output results if simulation succeeds
-    output(simulation, outputDirectory, seed);
-    run = false;
-  }
-  
-  std::random_device rd;
-  seed = rd();
-  
-  // Ensure seed is non-negative for file naming
-  while (seed < 0) {
-    seed = rd();
-  }
+    // Create simulation object with parameters
+    Simulation simulation(K,
+              migrationRates,
+              mutationRate,
+              driverProb,
+              mutFreqThreshold,
+              maxNrAnatomicalSites,
+              maxGenerations,
+              downsampleCellNumber,
+              migrationTransitionProbs);
+
+    // Run simulation
+    if (simulation.simulate())
+    {
+      // Output results if simulation succeeds
+      std::cout << "Simulation successful, outputting results." << std::endl;
+      output(simulation, outputDirectory, seed);
+      run = false;
+    } else {
+      // If simulation fails, draw a new positive seed and retry
+      std::random_device rd;
+      seed = rd();
+      while (seed < 0) {
+      seed = rd();
+      }
+      std::cout << "Simulation failed, drawing new seed and retrying." << std::endl;
+    }
   }
   
   return 0;
