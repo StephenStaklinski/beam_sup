@@ -12,16 +12,7 @@
 class Simulation
 {
 public:
-  
-  /// Constructor
-  ///
-  /// @param K Carrying capacity
-  /// @param migrationRates Migration rates
-  /// @param mutationRate Mutation rate
-  /// @param driverProb Driver mutation probability
-  /// @param mutFreqThreshold Mutation frequency threshold
-  /// @param maxNrAnatomicalSites Maximum number of detectable anatomical sites
-  /// @param migrationTransitionProbs Transition probability matrix for tissue migrations (must be a square matrix with rows summing to 1 and diagonal elements 0)
+  // Constructor
   Simulation(double K,
              std::vector<double> migrationRates,
              double mutationRate,
@@ -30,7 +21,8 @@ public:
              int maxNrAnatomicalSites,
              int maxGenerations,
              int downsampleCellNumber,
-             std::vector<std::vector<double>> migrationTransitionProbs);
+             std::vector<std::vector<double>> migrationTransitionProbs,
+             bool resolvePolytomies);
   
   /// Destructor
   ~Simulation();
@@ -69,7 +61,7 @@ public:
   void constructCellTree();
 
   /// Resolve polytomies in the cell tree
-  void resolvePolytomies(Digraph& cellTree, Node root, StringNodeMap& cellLabels, StringNodeMap& cellAnatomicalSites);
+  void resolvePolytomiesInTree(Digraph& cellTree, Node root, StringNodeMap& cellLabels, StringNodeMap& cellAnatomicalSites);
   
 private:
   /// Map from set of driver mutations to carrying capacity

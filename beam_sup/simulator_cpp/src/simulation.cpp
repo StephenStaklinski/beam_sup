@@ -9,7 +9,8 @@ Simulation::Simulation(double K,
                        int maxNrAnatomicalSites,
                        int maxGenerations,
                        int downsampleCellNumber,
-                       std::vector<std::vector<double>> migrationTransitionProbs)
+                       std::vector<std::vector<double>> migrationTransitionProbs,
+                       bool resolvePolytomies)
   : _G()
   , _rootG(lemon::INVALID)
   , _anatomicalSiteMap(_G)
@@ -39,7 +40,7 @@ Simulation::Simulation(double K,
   , _migrationTransitionProbs(migrationTransitionProbs)
   , _existingSites()
   , _anatomicalSiteLabel()
-  , _resolvePolytomies(true)
+  , _resolvePolytomies(resolvePolytomies)
 {}
 
 Simulation::~Simulation()
@@ -532,7 +533,7 @@ MigrationGraph Simulation::getMigrationGraph() const
 }
 
 
-void Simulation::resolvePolytomies(
+void Simulation::resolvePolytomiesInTree(
     Digraph& tree,
     Node root,
     StringNodeMap& labels,
@@ -700,7 +701,7 @@ void Simulation::constructCellTree() {
 
   // Resolve polytomies if requested
   if (_resolvePolytomies) {
-      resolvePolytomies(cellTree, root, cellLabels, cellAnatomicalSites);
+      resolvePolytomiesInTree(cellTree, root, cellLabels, cellAnatomicalSites);
   }
 
   // Update global cell tree pointer

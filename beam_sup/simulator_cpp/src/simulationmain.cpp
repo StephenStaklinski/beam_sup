@@ -73,6 +73,7 @@ int main(int argc, char** argv)
   std::string outputDirectory = "."; // Output directory
   int N = -1; // Number of successful simulations
   int downsampleCellNumber = 100; // Number of cells to downsample to
+  bool keepPolytomies = false; // Whether to keep polytomies in the cell tree
   
   // Parse command line arguments using Lemon ArgParser
   lemon::ArgParser ap(argc, argv);
@@ -87,8 +88,15 @@ int main(int argc, char** argv)
   .refOption("c", "Maximum number of cell division generations to end the simulation after (default: 250)", maxGenerations)
   .refOption("m", "Maximum number of detectable anatomical sites (default: -1)", maxNrAnatomicalSites)
   .refOption("d", "Number of cells to randomly downsample cell tree until reached (default: -1)", downsampleCellNumber)
+  .refOption("p", "Keep polytomies in the resulting cell tree (default: false)", keepPolytomies)
   .refOption("o", "Output directory (default: '.')", outputDirectory);
   ap.parse();
+
+  // Round about way to set resolvePolytomies due to ArgParser behavior with bool variables always being false by default
+  bool resolvePolytomies = true;
+  if (keepPolytomies) {
+    resolvePolytomies = false;
+  }
 
   // Read migration transition probabilities from file if provided
   std::vector<std::vector<double>> migrationTransitionProbs;
@@ -186,7 +194,8 @@ int main(int argc, char** argv)
               maxNrAnatomicalSites,
               maxGenerations,
               downsampleCellNumber,
-              migrationTransitionProbs);
+              migrationTransitionProbs,
+              resolvePolytomies);
 
     // Run simulation
     if (simulation.simulate())
