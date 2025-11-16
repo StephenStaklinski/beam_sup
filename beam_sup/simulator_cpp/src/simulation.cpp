@@ -9,7 +9,9 @@ Simulation::Simulation(double K,
                        int maxNrAnatomicalSites,
                        int maxGenerations,
                        int downsampleCellNumber,
+                       int inputNumPossibleAnatomicalSites,
                        std::vector<std::vector<double>> migrationTransitionProbs,
+                       int migrationStartGeneration,
                        bool resolvePolytomies)
   : _G()
   , _rootG(lemon::INVALID)
@@ -40,7 +42,9 @@ Simulation::Simulation(double K,
   , _migrationTransitionProbs(migrationTransitionProbs)
   , _existingSites()
   , _anatomicalSiteLabel()
+  , _migrationStartGeneration(migrationStartGeneration)
   , _resolvePolytomies(resolvePolytomies)
+  , _inputNumPossibleAnatomicalSites(inputNumPossibleAnatomicalSites)
 {}
 
 Simulation::~Simulation()
@@ -95,7 +99,7 @@ void Simulation::init()
 
   // If migration transition probabilities are not provided, set up a default uniform matrix
   if (_migrationTransitionProbs.empty()) {
-    int numPossibleAnatomicalSites = 10; // Default number of possible anatomical sites
+    int numPossibleAnatomicalSites = _inputNumPossibleAnatomicalSites;
     _migrationTransitionProbs.resize(numPossibleAnatomicalSites, std::vector<double>(numPossibleAnatomicalSites, 0.0));
     for (int i = 0; i < numPossibleAnatomicalSites; ++i) {
       double prob = 1.0 / (numPossibleAnatomicalSites - 1);
@@ -439,8 +443,10 @@ bool Simulation::simulate()
     _nrExtantCells = newNrExtantCells;
     std::swap(_extantCellsByDrivers, newExtantCellsByDrivers);
 
-    // Handle cell migration between anatomical sites
-    migrate();
+    // Perform migrations, optionally waiting until a specified migration start generation
+    if (_generation >= _migrationStartGeneration) {
+      migrate();
+    }
 
     // Advance to next generation
     ++_generation;

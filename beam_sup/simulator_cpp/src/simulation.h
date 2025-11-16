@@ -21,7 +21,9 @@ public:
              int maxNrAnatomicalSites,
              int maxGenerations,
              int downsampleCellNumber,
+             int inputNumPossibleAnatomicalSites,
              std::vector<std::vector<double>> migrationTransitionProbs,
+             int migrationStartGeneration,
              bool resolvePolytomies);
   
   /// Destructor
@@ -218,8 +220,12 @@ private:
   int _desiredNumberCells;
   /// Transition probability matrix for tissue migrations (must be a square matrix!)
   std::vector<std::vector<double>> _migrationTransitionProbs;
-  // Vector to track existing tissue sites
+  /// Vector to track existing tissue sites
   IntSet _existingSites;
+  /// Input number of possible anatomical sites (for default migration matrix when one is not provided as input)
+  int _inputNumPossibleAnatomicalSites;
+  /// Generation to start migrations
+  int _migrationStartGeneration;
   /// Whether to resolve polytomies in the cell tree
   bool _resolvePolytomies;
   };

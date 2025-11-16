@@ -73,11 +73,14 @@ int main(int argc, char** argv)
   std::string outputDirectory = "."; // Output directory
   int N = -1; // Number of successful simulations
   int downsampleCellNumber = 100; // Number of cells to downsample to
+  int inputNumPossibleAnatomicalSites = 10; // Number of possible anatomical sites for default migration matrix
+  int migrationStartGeneration = 0; // Generation to start migrations
   bool keepPolytomies = false; // Whether to keep polytomies in the cell tree
   
   // Parse command line arguments using Lemon ArgParser
   lemon::ArgParser ap(argc, argv);
   ap.refOption("s", "Random number generator seed (default: 0)", seed, false)
+  .refOption("ns", "Number of possible anatomical sites for default uniform migration matrix when not providing one as input (default: 10)", inputNumPossibleAnatomicalSites)
   .refOption("m", "Filepath to a csv file of a square migration probability matrix with rows sum to 1 and diagonal elements 0 (default: Uniform probabilities)", filenameMigrationMatrix, false)
   .refOption("d", "Driver probability (default: 1e-7)", driverProb)
   .refOption("f", "Mutation frequency threshold (default: 0.05)", mutFreqThreshold)
@@ -88,6 +91,7 @@ int main(int argc, char** argv)
   .refOption("c", "Maximum number of cell division generations to end the simulation after (default: 250)", maxGenerations)
   .refOption("m", "Maximum number of detectable anatomical sites (default: -1)", maxNrAnatomicalSites)
   .refOption("d", "Number of cells to randomly downsample cell tree until reached (default: -1)", downsampleCellNumber)
+  .refOption("g", "Generation to start migrations (default: 0, meaning migrations start from the beginning)", migrationStartGeneration)
   .refOption("p", "Keep polytomies in the resulting cell tree (default: false)", keepPolytomies)
   .refOption("o", "Output directory (default: '.')", outputDirectory);
   ap.parse();
@@ -194,7 +198,9 @@ int main(int argc, char** argv)
               maxNrAnatomicalSites,
               maxGenerations,
               downsampleCellNumber,
+              inputNumPossibleAnatomicalSites,
               migrationTransitionProbs,
+              migrationStartGeneration,
               resolvePolytomies);
 
     // Run simulation
