@@ -90,7 +90,7 @@ def label_tissues_fitch_parsimony(
             node.decision = "leaf"
         else:
             # Process all children
-            children_tissue_sets = [postorder(child) for child in node.children]
+            children_tissue_sets = [postorder(child, tissues_df) for child in node.children]
 
             # Compute the possible tissues for internal nodes based on the children's tissue sets
             intersection = set.intersection(*children_tissue_sets)
@@ -137,7 +137,6 @@ def label_tissues_fitch_parsimony(
         all_solutions = [tree]
 
         for node in tree.traverse():
-            print(node.name)
             if node.decision == "random":
                 print("random")
                 tissues = list(node.tissue_set)
@@ -158,18 +157,15 @@ def label_tissues_fitch_parsimony(
 
         return all_solutions
 
-    # Read in the tree and tissues
-    copy_tree = tree.copy()
-
     # Run the postorder to get candidate tissues at each node
-    postorder(copy_tree, tissues_df)
+    postorder(tree, tissues_df)
 
     # Initialize the parsimony scores
     for node in tree.traverse():
         node.parsimony_score = 0
 
     # Assign the ancestral tissues for each node and update the parsimony score
-    num_solutions = preorder(tree, primary_tissue, total_solutions=1)
+    num_solutions = preorder(tree, total_solutions=1, primary_tissue=primary_tissue)
 
     # Obtain the total parsimony score for the tree with random node selections
     total_parsimony_score = sum(node.parsimony_score for node in tree.traverse())
@@ -260,6 +256,7 @@ def label_tissues_random(tree: Tree, tissues_df: pd.DataFrame) -> Tree:
     for node in copy_tree.traverse():
         # leaves are assumed to be known labels
         if node.is_leaf():
+            print(node.name)
             tissue = tissues_df.loc[
                 tissues_df["cell"] == str(node.name), "tissue"
             ].values[0]

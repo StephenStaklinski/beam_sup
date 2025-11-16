@@ -62,7 +62,7 @@ def convert_matrix_to_row_successive_matrix(
 
     Args:
         character_matrix (pd.DataFrame): The input character matrix with clones as rows and sites as columns.
-        mut_dict (dict): Dictionary mapping site indices to mutation strings.
+        mut_dict (dict): Dictionary mapping the current mutation integers to mutation strings. Should work for both single dict and nested dict cassiopeia/laml formats.
         indel_priors (Optional: pd.DataFrame): DataFrame containing mutation prior counts, indexed by mutation string. Default is None.
 
     Returns:
@@ -80,7 +80,12 @@ def convert_matrix_to_row_successive_matrix(
             # Skip undedited and missing sites
             if mut == 0 or mut == -1:
                 continue
-            mut_str = mut_dict[int(site[1:]) - 1][mut]
+            if isinstance(mut_dict, dict) and all(isinstance(v, dict) for v in mut_dict.values()):
+                # Nested dictionary case - compatibility for quinn et al. and laml, etc. site specific priors style
+                mut_str = mut_dict[int(site[1:]) - 1][mut]
+            else:
+                # Single dictionary case - compatibility for simpler mutation dicts across the full matrix all sites in one
+                mut_str = mut_dict[mut]
             # Replace the mutation with the successive mutation
             if mut_str not in successive_mut_dict:
                 successive_mut_dict[mut_str] = i
@@ -89,20 +94,17 @@ def convert_matrix_to_row_successive_matrix(
             else:
                 new_mut_value = successive_mut_dict[mut_str]
             successive_char_matrix.loc[clone, site] = new_mut_value
-
+            
     successive_edit_rates = {}
-
-    if indel_priors:
+    
+    if isinstance(indel_priors, pd.DataFrame) and not indel_priors.empty:
         # Compute normalized edit rates for the successive matrix values
         for mut_str, mut_int in successive_mut_dict.items():
-            successive_edit_rates[mut_int] = indel_priors.loc[mut_str]["count"]
-
+            successive_edit_rates[mut_int] = indel_priors.loc[mut_str]["count"] # Use cassiopeia counts leveraging repetitiveness in sites rather than just counting from each site myself
         total_count = sum(successive_edit_rates.values())
         for mut_int in successive_edit_rates:
-            successive_edit_rates[mut_int] = (
-                successive_edit_rates[mut_int] / total_count
-            )
-
+            successive_edit_rates[mut_int] = float(successive_edit_rates[mut_int] / total_count)
+            
     return successive_char_matrix, successive_mut_dict, successive_edit_rates
 
 
@@ -119,41 +121,30 @@ def expand_clones_with_multiple_tissues(
     Returns:
         tuple: (expanded_matrix_df, expanded_tissues_df)
     """
-    # Only keep relevant columns
-    tissues_df = tissues_df[["group_name", "tissues"]].copy()
-
     # Find clones with more than one tissue
-    clones_with_multiple_tissues = tissues_df.loc[
-        tissues_df["tissues"].str.contains(",", na=False), "group_name"
-    ].values.tolist()
+    clones_with_multiple_tissues = tissues_df.loc[tissues_df["tissues"].str.contains(",", na=False), "group_name"].values.tolist()
 
     new_matrix_rows = []
     new_tissues_rows = []
-    clones_to_drop = []
 
-    for clone in clones_with_multiple_tissues:
-        tissues = (
-            tissues_df.loc[tissues_df["group_name"] == clone, "tissues"]
-            .values[0]
-            .split(",")
-        )
-        for i, tissue in enumerate(tissues):
-            new_row = matrix_df.loc[matrix_df.index == clone].values[0]
+    for clone in matrix_df.index:
+        if clone in clones_with_multiple_tissues:
+            tissues = (tissues_df.loc[tissues_df["group_name"] == clone, "tissues"].values[0].split(","))
+            for i, tissue in enumerate(tissues):
+                new_row = matrix_df.loc[matrix_df.index == clone].values[0]
+                new_matrix_rows.append(
+                    pd.Series(new_row, index=matrix_df.columns, name=f"{clone}_{i}")
+                )
+                new_tissues_rows.append({"group_name": f"{clone}_{i}", "tissues": tissue})
+        else:
             new_matrix_rows.append(
-                pd.Series(new_row, index=matrix_df.columns, name=f"{clone}_{i}")
+                pd.Series(matrix_df.loc[matrix_df.index == clone].values[0], index=matrix_df.columns, name=clone)
             )
-            new_tissues_rows.append({"group_name": f"{clone}_{i}", "tissues": tissue})
-        clones_to_drop.append(clone)
-        tissues_df = tissues_df.loc[tissues_df["group_name"] != clone]
+            tissue = tissues_df.loc[tissues_df["group_name"] == clone, "tissues"].values[0]
+            new_tissues_rows.append({"group_name": clone, "tissues": tissue})
 
-    # Remove the original entries for the clone
-    for clone in clones_to_drop:
-        matrix_df = matrix_df.drop(index=clone)
+    # Make new dataframes
+    expanded_matrix_df = pd.DataFrame(new_matrix_rows)
+    expanded_tissues_df = pd.DataFrame(new_tissues_rows)
 
-    # Concatenate new rows to the original DataFrames
-    matrix_df = pd.concat([matrix_df, pd.DataFrame(new_matrix_rows)])
-    tissues_df = pd.concat(
-        [tissues_df, pd.DataFrame(new_tissues_rows)], ignore_index=True
-    )
-
-    return matrix_df, tissues_df
+    return expanded_matrix_df, expanded_tissues_df

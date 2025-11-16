@@ -2,6 +2,7 @@
 import sys
 from Bio import Phylo
 from ete3 import Tree
+import dendropy
 
 
 def convert_newick_to_nexus(newick_file: str, outfile: str) -> None:
@@ -179,6 +180,40 @@ def annotate_tree_with_tissues(nwk_file: str, tissues_file: str, out_file: str) 
         node.name = name + "_" + tissues[name]
 
     tree.write(outfile=out_file, format=8)
+    
+
+def remove_tissues_from_tree(nwk_file: str, out_file: str) -> None:
+    """
+    Removes appended tissue types from each node name in a Newick tree and writes the result.
+
+    Args:
+        nwk_file (str): Path to the input Newick tree file.
+        out_file (str): Path to the output Newick file with cleaned node names.
+    """
+
+    # Read the tree (DendroPy preserves underscores by default)
+    tree = dendropy.Tree.get(
+        path=nwk_file,
+        schema="newick",
+        preserve_underscores=True
+    )
+
+    # Modify leaf and internal node labels
+    for node in tree:
+        if node.label:
+            node.label = "_".join(node.label.split("_")[0:-1])
+        if node.taxon and node.taxon.label:
+            node.taxon.label = "_".join(node.taxon.label.split("_")[0:-1])
+
+    # Write out to file
+    tree.write(
+        path=out_file,
+        schema="newick",
+        suppress_rooting=True,
+        suppress_internal_node_labels=False,
+        unquoted_underscores=True
+        
+    )
 
 
 def format_edge_list_to_newick(
