@@ -14,11 +14,7 @@ Simulation::Simulation(double K,
                        int migrationStartGeneration,
                        int migrationEndGeneration,
                        bool resolvePolytomies)
-  : _G()
-  , _rootG(lemon::INVALID)
-  , _anatomicalSiteMap(_G)
-  , _indexToVertexG()
-  , _generation(0)
+  : _generation(0)
   , _extantCellsByDrivers()
   , _nrExtantCells(0)
   , _nrMutations(0)
@@ -87,13 +83,6 @@ void Simulation::init()
   _idCellMap[_idIterator] = founder; // Map cell ID to founder cell
   _cellToGenerationNumber[_idIterator] = _generation; // Map cell ID to generation number
   _extantCellsByDrivers[initialAnatomicalSite][_driverMutations].push_back(founder); // Add founder to extant cells by driver group
-
-  // Initialize migration graph for anatomical sites
-  _G.clear(); // Remove any previous graph structure
-  _rootG = _G.addNode(); // Add root node for site 0
-  _anatomicalSiteMap[_rootG] = initialAnatomicalSite; // Map root node to site 0
-  _indexToVertexG.clear(); // Clear previous site-to-node mapping
-  _indexToVertexG[initialAnatomicalSite] = _rootG; // Map site 0 to root node
 
   _nrExtantCells = 1; // Only the founder cell exists initially
 
@@ -167,17 +156,6 @@ void Simulation::updateAnatomicalSiteFactors()
       sitesToErase.insert(s); // Site has no cells, schedule it for removal
     }
   }
-
-  // Remove dead anatomical sites
-  for (auto s : sitesToErase) {
-    _existingSites.erase(s);
-    Node v = _indexToVertexG[s];
-    // Warn if migration events are lost
-    // if (lemon::countOutArcs(_G, v) > 0) {
-    //   std::cout << "WARNING: Migration events with site " << s << " are lost since it died." << std::endl;
-    // }
-    _G.erase(v);
-  }
 }
 
 // Select a target anatomical site for migration from site s based on transition probabilities
@@ -196,9 +174,6 @@ int Simulation::getTargetAnatomicalSite(int s)
   // If the target anatomical site t does not exist yet, initialize it in the migration graph and related structures
   if (_existingSites.find(t) == _existingSites.end())
   {
-    Node v_t = _G.addNode();           // Add a new node to the migration graph for site t
-    _indexToVertexG[t] = v_t;          // Map anatomical site index t to the new graph node
-    _anatomicalSiteMap[v_t] = t;       // Associate the new node with anatomical site t
     _isActiveAnatomicalSite[t] = false;// Mark site t as inactive initially
     _existingSites.insert(t);          // Add site t to the set of existing anatomical sites
   }
@@ -230,8 +205,6 @@ void Simulation::migrate()
     // Select migration target site
     int t = getTargetAnatomicalSite(s);
     if (t == s) continue; // Prevent self-migration
-    Node v_s = _indexToVertexG[s];  // Get the migration graph node for anatomical site s
-    Node v_t = _indexToVertexG[t];  // Get the migration graph node for target site t
 
     // Unweighted number of extant cells in site s
     int nrExtantCells_s = getNrExtantCells(s, false);
@@ -263,7 +236,6 @@ void Simulation::migrate()
         if (migratedClones.count(cell.getMutation()) == 0) {
           migratedClones.insert(cell.getMutation()); // Mark mutation as migrated
           cell.migrate(t); // Update cell's anatomical site to target t
-          Arc a = _G.addArc(v_s, v_t); // Add migration event to migration graph
           _extantCellsByDrivers[t][X].push_back(cell); // Move cell to target site t, same driver group
           extantCellByDrivers_sX.pop_back(); // Remove cell from source site
           ++migrated;
@@ -490,56 +462,6 @@ bool Simulation::simulate()
   // Fail simulation because all cells died so no tumor exists
   std::cout << "Tumor died." << std::endl;
   return false;
-}
-
-// Returns a filtered migration graph containing only active anatomical sites and migration events between them
-MigrationGraph Simulation::getMigrationGraph() const
-{
-  // Assign labels to nodes for active anatomical sites
-  StringNodeMap label(_G);
-  for (NodeIt v(_G); v != lemon::INVALID; ++v)
-  {
-    int site = _anatomicalSiteMap[v];
-    if (_isActiveAnatomicalSite.at(site)) {
-      label[v] = _anatomicalSiteLabel.at(site);
-    }
-  }
-
-  // Prepare node and arc filters: only keep nodes/arcs for active sites
-  BoolNodeMap nodeFilter(_G, false);
-  BoolArcMap arcFilter(_G, false);
-
-  for (NodeIt v(_G); v != lemon::INVALID; ++v)
-  {
-    int site = _anatomicalSiteMap[v];
-    nodeFilter[v] = _isActiveAnatomicalSite.at(site);
-  }
-
-  for (ArcIt a(_G); a != lemon::INVALID; ++a)
-  {
-    Node u = _G.source(a);
-    Node v = _G.target(a);
-    // Only keep arcs between active sites
-    if (nodeFilter[u] && nodeFilter[v]) {
-      arcFilter[a] = true;
-    }
-  }
-
-  // Create a subgraph view with only active nodes/arcs
-  SubDigraph subG(_G, nodeFilter, arcFilter);
-
-  // Copy the filtered subgraph into a new graph object
-  Digraph filteredGraph;
-  Node filteredRoot;
-  StringNodeMap filteredLabels(filteredGraph);
-
-  lemon::digraphCopy(subG, filteredGraph)
-    .node(_rootG, filteredRoot)
-    .nodeMap(label, filteredLabels)
-    .run();
-
-  // Return the migration graph object
-  return MigrationGraph(filteredGraph, filteredRoot, filteredLabels);
 }
 
 

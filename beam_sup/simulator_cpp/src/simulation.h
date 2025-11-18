@@ -2,7 +2,6 @@
 #define SIMULATION_H
 
 #include "cell.h"
-#include "migrationgraph.h"
 #include "tree.h"
 #include <memory>
 #include <unordered_set>
@@ -32,9 +31,6 @@ public:
   
   /// Simulate a cell tree. Return true if simulation was successful and false otherwise
   bool simulate();
-  
-  /// Return simulated migration graph
-  MigrationGraph getMigrationGraph() const;
 
   /// Return simulated clone tree
   const Tree& getCellTree() const
@@ -161,14 +157,6 @@ private:
   
   /// Maximum number of cells
   const int _maxGenerations;
-  /// Migration graph;
-  Digraph _G;
-  /// Migration graph root node
-  Node _rootG;
-  /// Node to anatomical site map
-  IntNodeMap _anatomicalSiteMap;
-  /// Anatomical site to node
-  std::map<int, Node> _indexToVertexG;
   /// Generation
   int _generation;
   /// Extant cells per anatomical site further split by drivers

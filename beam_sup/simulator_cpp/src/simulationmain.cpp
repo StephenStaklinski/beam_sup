@@ -27,13 +27,6 @@ void output(const Simulation& simulation,
     std::cerr << "ERROR: Output path exists but is not a directory: " << outputDirectory << std::endl;
     exit(1);
   }
-  
-  // // Output migration graph to CSV
-  // MigrationGraph G = simulation.getMigrationGraph();
-  // snprintf(buf, 1024, "%s/migration_graph_seed%d.csv", outputDirectory.c_str(), seed);
-  // std::ofstream outG_tree(buf);
-  // G.write(outG_tree);
-  // outG_tree.close();
 
   // Get cell tree from the simulation to trace cell lineage
   const Tree& CT = simulation.getCellTree();
