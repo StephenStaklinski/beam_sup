@@ -365,7 +365,7 @@ class BeamResults:
         )
 
 
-def run_simulation():
+def run_full_simulation():
 
     parser = argparse.ArgumentParser(
         description="Run metastatic cancer population simulation and overlay CRISPR barcode data."
@@ -392,10 +392,22 @@ def run_simulation():
         help="Number of cells to downsample.",
     )
     parser.add_argument(
+        "--num_possible_tissues",
+        type=int,
+        default=10,
+        help="Number of tissues to simulate up to.",
+    )
+    parser.add_argument(
         "--max_anatomical_sites",
         type=int,
         default=-1,
         help="Maximum number of anatomical sites.",
+    )
+    parser.add_argument(
+        "--migration_start_generation",
+        type=int,
+        default=0,
+        help="Generation at which migrations can start occurring.",
     )
     parser.add_argument(
         "--seed", type=int, default=None, help="Random seed for reproducibility."
@@ -409,6 +421,18 @@ def run_simulation():
     parser.add_argument(
         "--mutationrate", type=float, default=0.1, help="Mutation rate per cassette."
     )
+    parser.add_argument(
+        "--heritable_silencing_rate",
+        type=float,
+        default=0.0001,
+        help="Rate of heritable silencing of CRISPR cassettes.",
+    )
+    parser.add_argument(
+        "--stochastic_silencing_rate",
+        type=float,
+        default=0.01,
+        help="Rate of stochastic silencing of CRISPR cassettes.",
+    )
 
     args = parser.parse_args()
 
@@ -418,7 +442,9 @@ def run_simulation():
         num_generations=args.num_generations,
         migration_rate=args.migration_rate,
         num_cells_downsample=args.num_cells_downsample,
+        num_possible_tissues=args.num_possible_tissues,
         max_anatomical_sites=args.max_anatomical_sites,
+        migration_start_generation=args.migration_start_generation,
         seed=args.seed,
     )
 
@@ -441,4 +467,52 @@ def run_simulation():
         outprefix=os.path.join(seed_dir, str(seed)),
         num_sites=args.num_sites,
         mutationrate=args.mutationrate,
+        heritable_silencing_rate=args.heritable_silencing_rate,
+        stochastic_silencing_rate=args.stochastic_silencing_rate
+    )
+
+
+def simulate_barcode_overlay_only():
+    parser = argparse.ArgumentParser(
+        description="Overlay simulated CRISPR barcode data onto a given ground truth tree."
+    )
+    parser.add_argument(
+        "--ground_truth_tree",
+        required=True,
+        help="File path to the ground truth tree in Newick format.",
+    )
+    parser.add_argument(
+        "--outprefix", required=True, help="Output prefix for the simulated data."
+    )
+    parser.add_argument(
+        "--num_sites",
+        type=int,
+        default=50,
+        help="Number of CRISPR cassettes (cuts) to simulate.",
+    )
+    parser.add_argument(
+        "--mutationrate", type=float, default=0.1, help="Mutation rate per cassette."
+    )
+    parser.add_argument(
+        "--heritable_silencing_rate",
+        type=float,
+        default=0.0001,
+        help="Rate of heritable silencing of CRISPR cassettes.",
+    )
+    parser.add_argument(
+        "--stochastic_silencing_rate",
+        type=float,
+        default=0.01,
+        help="Rate of stochastic silencing of CRISPR cassettes.",
+    )
+
+    args = parser.parse_args()
+
+    overlay_simulated_crispr_barcode_data(
+        ground_truth_tree_filepath=args.ground_truth_tree,
+        outprefix=args.outprefix,
+        num_sites=args.num_sites,
+        mutationrate=args.mutationrate,
+        heritable_silencing_rate=args.heritable_silencing_rate,
+        stochastic_silencing_rate=args.stochastic_silencing_rate
     )

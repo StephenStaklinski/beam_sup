@@ -24,6 +24,7 @@ public:
              int inputNumPossibleAnatomicalSites,
              std::vector<std::vector<double>> migrationTransitionProbs,
              int migrationStartGeneration,
+             int migrationEndGeneration,
              bool resolvePolytomies);
   
   /// Destructor
@@ -226,6 +227,8 @@ private:
   int _inputNumPossibleAnatomicalSites;
   /// Generation to start migrations
   int _migrationStartGeneration;
+  /// Generation to stop migrations
+  int _migrationEndGeneration;
   /// Whether to resolve polytomies in the cell tree
   bool _resolvePolytomies;
   };

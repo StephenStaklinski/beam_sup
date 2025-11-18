@@ -69,12 +69,13 @@ int main(int argc, char** argv)
   double mutationRate = 0.1; // Mutation rate
   double driverProb = 2e-7; // Driver mutation probability
   int maxNrAnatomicalSites = -1; // Maximum number of anatomical sites
-  int maxGenerations = 100; // Maximum number of cell division generations
+  int maxGenerations = 250; // Maximum number of cell division generations
   std::string outputDirectory = "."; // Output directory
   int N = -1; // Number of successful simulations
   int downsampleCellNumber = 100; // Number of cells to downsample to
   int inputNumPossibleAnatomicalSites = 10; // Number of possible anatomical sites for default migration matrix
   int migrationStartGeneration = 0; // Generation to start migrations
+  int migrationEndGeneration = -1; // Last generation to perform migrations
   bool keepPolytomies = false; // Whether to keep polytomies in the cell tree
   
   // Parse command line arguments using Lemon ArgParser
@@ -91,7 +92,8 @@ int main(int argc, char** argv)
   .refOption("c", "Maximum number of cell division generations to end the simulation after (default: 250)", maxGenerations)
   .refOption("m", "Maximum number of detectable anatomical sites (default: -1)", maxNrAnatomicalSites)
   .refOption("d", "Number of cells to randomly downsample cell tree until reached (default: -1)", downsampleCellNumber)
-  .refOption("g", "Generation to start migrations (default: 0, meaning migrations start from the beginning)", migrationStartGeneration)
+  .refOption("gs", "Generation to start migrations (default: 0, meaning migrations start from the beginning)", migrationStartGeneration)
+  .refOption("ge", "Last generation for migrations (default: -1, meaning migrations continue until the end)", migrationEndGeneration)
   .refOption("p", "Keep polytomies in the resulting cell tree (default: false)", keepPolytomies)
   .refOption("o", "Output directory (default: '.')", outputDirectory);
   ap.parse();
@@ -201,6 +203,7 @@ int main(int argc, char** argv)
               inputNumPossibleAnatomicalSites,
               migrationTransitionProbs,
               migrationStartGeneration,
+              migrationEndGeneration,
               resolvePolytomies);
 
     // Run simulation

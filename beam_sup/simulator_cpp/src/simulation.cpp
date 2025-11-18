@@ -12,6 +12,7 @@ Simulation::Simulation(double K,
                        int inputNumPossibleAnatomicalSites,
                        std::vector<std::vector<double>> migrationTransitionProbs,
                        int migrationStartGeneration,
+                       int migrationEndGeneration,
                        bool resolvePolytomies)
   : _G()
   , _rootG(lemon::INVALID)
@@ -43,6 +44,7 @@ Simulation::Simulation(double K,
   , _existingSites()
   , _anatomicalSiteLabel()
   , _migrationStartGeneration(migrationStartGeneration)
+  , _migrationEndGeneration(migrationEndGeneration)
   , _resolvePolytomies(resolvePolytomies)
   , _inputNumPossibleAnatomicalSites(inputNumPossibleAnatomicalSites)
 {}
@@ -290,7 +292,7 @@ bool Simulation::simulate()
     if (_generation % 25 == 0 || _generation == 0) {
       std::cout << "Generation: " << _generation
           << ", Total cells: " << _nrExtantCells
-          << ", Active anatomical sites: " << _nrActiveAnatomicalSites
+          << ", Detectable anatomical sites: " << _nrActiveAnatomicalSites
           << std::endl;
     }
 
@@ -445,7 +447,9 @@ bool Simulation::simulate()
 
     // Perform migrations, optionally waiting until a specified migration start generation
     if (_generation >= _migrationStartGeneration) {
-      migrate();
+      if (_migrationEndGeneration == -1 || _generation <= _migrationEndGeneration) {
+        migrate();
+      }
     }
 
     // Advance to next generation

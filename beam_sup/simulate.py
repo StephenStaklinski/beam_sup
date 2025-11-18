@@ -15,7 +15,9 @@ def simulate_metastatic_cancer_population(
     num_generations: int = 250,
     migration_rate: str = "1e-6",
     num_cells_downsample: int = 50,
+    num_possible_tissues: int = 10,
     max_anatomical_sites: int = -1,
+    migration_start_generation: int = 0,
     rerun_no_migrations: bool = True,
     seed: int | None = None,
 ) -> int:
@@ -27,7 +29,9 @@ def simulate_metastatic_cancer_population(
         num_generations (int, optional): Number of generations to simulate. Default is 250.
         migration_rate (str or float, optional): Migration rate between anatomical sites. Default is "1e-6".
         num_cells_downsample (int, optional): Number of cells to downsample in the output. Default is 50.
+        num_possible_tissues (int, optional): Number of tissues to simulate up to. Default is 10.
         max_anatomical_sites (int, optional): Maximum number of anatomical sites. Default is -1 (no limit).
+        migration_start_generation (int, optional): Generation at which migrations can start occurring. Default is 0.
         rerun_no_migrations (bool, optional): If True, rerun the simulation if no migration events occured. Default is True.
         seed (int | None, optional): Random seed for reproducibility. If None, a random seed is generated.
 
@@ -62,10 +66,14 @@ def simulate_metastatic_cancer_population(
         str(seed),
         "-o",
         outprefix,
+        "-ns",
+        str(num_possible_tissues),
         "-m",
         str(max_anatomical_sites),
         "-d",
         str(num_cells_downsample),
+        "-g",
+        str(migration_start_generation),
     ]
 
     logfile = os.path.join(outprefix, f"{seed}_terminal.log")
@@ -102,18 +110,11 @@ def overlay_simulated_crispr_barcode_data(
     outprefix: str,
     num_sites: int = 50,
     mutationrate: float = 0.1,
+    heritable_silencing_rate: float = 0.0001,
+    stochastic_silencing_rate: float = 0.01
 ) -> None:
     """
     Simulates Cas9 lineage tracing data and overlays it onto a given ground truth tree.
-
-    Args:
-        ground_truth_tree_filepath (str): File path to the ground truth tree in Newick format.
-        outprefix (str): Output prefix.
-        num_cuts (int): Number of cassettes (cuts) to simulate.
-        m (float): Mutation rate per cassette.
-
-    Output:
-        A TSV file containing the simulated indel character matrix is saved to the specified output directory.
     """
     mut_rates = [float(mutationrate)] * num_sites
 
@@ -240,8 +241,8 @@ def overlay_simulated_crispr_barcode_data(
         state_generating_distribution=lambda: np.random.exponential(1e-5),
         number_of_states=100,
         state_priors=state_priors,
-        heritable_silencing_rate=0.0001,
-        stochastic_silencing_rate=0.01,
+        heritable_silencing_rate=heritable_silencing_rate,
+        stochastic_silencing_rate=stochastic_silencing_rate,
         heritable_missing_data_state=-1,
         stochastic_missing_data_state=-1,
     )
