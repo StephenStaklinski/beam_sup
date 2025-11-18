@@ -50,6 +50,12 @@ void output(const Simulation& simulation,
   const StringNodeMap& cPlus = simulation.getCellVertexLabeling();
   CT.writeVertexLabeling(outCT_vertex_labeling, cPlus);
   outCT_vertex_labeling.close();
+
+  // Output the migration history implied by the output cell tree
+  snprintf(buf, 1024, "%s/cell_tree_seed%d.migrations", outputDirectory.c_str(), seed);
+  std::ofstream outMig(buf);
+  simulation.writeMigrationHistory(outMig, &CT, cPlus);
+  outMig.close();
 }
 
 int main(int argc, char** argv)

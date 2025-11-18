@@ -18,6 +18,7 @@ def simulate_metastatic_cancer_population(
     num_possible_tissues: int = 10,
     max_anatomical_sites: int = -1,
     migration_start_generation: int = 0,
+    migration_end_generation: int = -1,
     rerun_no_migrations: bool = True,
     seed: int | None = None,
 ) -> int:
@@ -32,6 +33,7 @@ def simulate_metastatic_cancer_population(
         num_possible_tissues (int, optional): Number of tissues to simulate up to. Default is 10.
         max_anatomical_sites (int, optional): Maximum number of anatomical sites. Default is -1 (no limit).
         migration_start_generation (int, optional): Generation at which migrations can start occurring. Default is 0.
+        migration_end_generation (int, optional): Generation after which migrations stop occurring. Default is -1 (no limit).
         rerun_no_migrations (bool, optional): If True, rerun the simulation if no migration events occured. Default is True.
         seed (int | None, optional): Random seed for reproducibility. If None, a random seed is generated.
 
@@ -72,8 +74,10 @@ def simulate_metastatic_cancer_population(
         str(max_anatomical_sites),
         "-d",
         str(num_cells_downsample),
-        "-g",
+        "-gs",
         str(migration_start_generation),
+        "-ge",
+        str(migration_end_generation),
     ]
 
     logfile = os.path.join(outprefix, f"{seed}_terminal.log")
@@ -81,7 +85,7 @@ def simulate_metastatic_cancer_population(
         subprocess.run(cmd, check=True, stdout=logf, stderr=subprocess.STDOUT)
 
     if rerun_no_migrations:
-        # Check if migrations occurred by inspecting the migration graph files
+        # Check if migrations occurred by inspecting the simulation output
         # If no migrations, then repeat simulation
         nwk = glob.glob(os.path.join(outprefix, "*.nwk"))[0]
         labeling = glob.glob(os.path.join(outprefix, "*.vertex.labeling"))[0]

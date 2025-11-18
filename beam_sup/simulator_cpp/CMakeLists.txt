@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set( simulation_src
   src/utils.cpp
   src/tree.cpp
-  src/migrationgraph.cpp
   src/cell.cpp
   src/simulationmain.cpp
   src/simulation.cpp

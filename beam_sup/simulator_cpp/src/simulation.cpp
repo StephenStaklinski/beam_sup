@@ -488,8 +488,8 @@ void Simulation::resolvePolytomiesInTree(
             continue; // No polytomy to resolve, so skip this node
         }
 
-        // Log when a polytomy is found
-        std::cout << "Resolving polytomy at node " << labels[v] << " with " << children.size() << " children." << std::endl;
+        // // Log when a polytomy is found
+        // std::cout << "Resolving polytomy at node " << labels[v] << " with " << children.size() << " children." << std::endl;
 
         // Extract original polytomy parent label and tissue
         std::string parentLabel = labels[v];
@@ -711,3 +711,25 @@ void Simulation::writeNewick(std::ostream& os, const Tree* pCellT, const IntIntM
   traverse(rootNode, 0);
   os << ";" << std::endl;
 }
+
+
+void Simulation::writeMigrationHistory(std::ostream& os, const Tree* pCellT, const StringNodeMap& tissueMap) const {
+
+    const Digraph& g = pCellT->tree();
+
+    for (Digraph::ArcIt arc(g); arc != lemon::INVALID; ++arc) {
+        Node parent = g.source(arc);
+        Node child  = g.target(arc);
+
+        const std::string& parentLabel  = pCellT->label(parent);
+        const std::string& childLabel   = pCellT->label(child);
+        const std::string& parentTissue = tissueMap[parent];
+        const std::string& childTissue  = tissueMap[child];
+
+        // Only output migration edges (tissue transitions)
+        if (parentTissue != childTissue) {
+            os << parentTissue << " -> " << childTissue << "\n";
+        }
+    }
+}
+

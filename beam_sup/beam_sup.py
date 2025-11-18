@@ -410,6 +410,12 @@ def run_full_simulation():
         help="Generation at which migrations can start occurring.",
     )
     parser.add_argument(
+        "--migration_end_generation",
+        type=int,
+        default=-1,
+        help="Generation after which migrations stop occurring.",
+    )
+    parser.add_argument(
         "--seed", type=int, default=None, help="Random seed for reproducibility."
     )
     parser.add_argument(
@@ -445,11 +451,12 @@ def run_full_simulation():
         num_possible_tissues=args.num_possible_tissues,
         max_anatomical_sites=args.max_anatomical_sites,
         migration_start_generation=args.migration_start_generation,
+        migration_end_generation=args.migration_end_generation,
         seed=args.seed,
     )
 
     # Find the ground truth tree file
-    seed_dir = os.path.join(args.outdir, str(seed))
+    seed_dir = args.outdir
     ground_truth_tree = None
     if os.path.isdir(seed_dir):
         for fname in os.listdir(seed_dir):

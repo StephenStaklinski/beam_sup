@@ -54,7 +54,10 @@ public:
   }
 
   /// Get newick string for a digraph tree with branch lengths as the number of total generations (same as cell divisions in this setup) for the mutations at the node branch point
-  void writeNewick(std::ostream& os, const Tree* pCloneT, const IntIntMap& mutationToGenerationNumber) const;
+  void writeNewick(std::ostream& os, const Tree* pCellT, const IntIntMap& mutationToGenerationNumber) const;
+
+  /// Write migration history implied by the cell tree to output stream
+  void writeMigrationHistory(std::ostream& os, const Tree* pCellT, const StringNodeMap& cellAnatomicalSites) const;
   
   /// Build cell Tree from final living cells and total allCells map
   void constructCellTree();
