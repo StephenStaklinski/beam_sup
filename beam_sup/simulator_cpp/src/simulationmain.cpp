@@ -35,7 +35,7 @@ void output(const Simulation& simulation,
   snprintf(buf, 1024, "%s/cell_tree_seed%d.nwk", outputDirectory.c_str(), seed);
   std::ofstream outCT_newick(buf);
   const std::map<int, int> cellToGeneration = simulation.getCellToGenerationNumber();
-  simulation.writeNewick(outCT_newick, &CT, cellToGeneration);
+  simulation.writeNewick(outCT_newick, CT, cellToGeneration);
   outCT_newick.close();
 
   // Output leaf labeling for the cell tree
@@ -54,7 +54,7 @@ void output(const Simulation& simulation,
   // Output the migration history implied by the output cell tree
   snprintf(buf, 1024, "%s/cell_tree_seed%d.migrations", outputDirectory.c_str(), seed);
   std::ofstream outMig(buf);
-  simulation.writeMigrationHistory(outMig, &CT, cPlus);
+  simulation.writeMigrationHistory(outMig, CT, cPlus);
   outMig.close();
 }
 

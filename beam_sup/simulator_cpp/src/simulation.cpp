@@ -657,8 +657,8 @@ void Simulation::constructCellTree() {
 
 // Writes the Tree in Newick format to the provided output stream
 // Branch lengths are calculated using generation times / cell divisions
-void Simulation::writeNewick(std::ostream& os, const Tree* pCellT, const IntIntMap& mutationToGenerationNumber) const {
-  const Digraph& tree = pCellT->tree();
+void Simulation::writeNewick(std::ostream& os, const Tree& pCellT, const IntIntMap& mutationToGenerationNumber) const {
+  const Digraph& tree = pCellT.tree();
 
   // Helper to parse mutation IDs from a label string
   auto parseMutations = [](const std::string& label) -> std::vector<int> {
@@ -674,7 +674,7 @@ void Simulation::writeNewick(std::ostream& os, const Tree* pCellT, const IntIntM
 
   // Recursive function to traverse the tree and write Newick format
   std::function<void(Digraph::Node, int)> traverse = [&](Digraph::Node node, int parent_time) {
-    const std::string label = pCellT->label(node);
+    const std::string label = pCellT.label(node);
 
     // Determine generation time for this node
     int node_time = parent_time;
@@ -707,22 +707,22 @@ void Simulation::writeNewick(std::ostream& os, const Tree* pCellT, const IntIntM
   };
 
   // Start traversal from the root node
-  Digraph::Node rootNode = pCellT->root();
+  Digraph::Node rootNode = pCellT.root();
   traverse(rootNode, 0);
   os << ";" << std::endl;
 }
 
 
-void Simulation::writeMigrationHistory(std::ostream& os, const Tree* pCellT, const StringNodeMap& tissueMap) const {
+void Simulation::writeMigrationHistory(std::ostream& os, const Tree& pCellT, const StringNodeMap& tissueMap) const {
 
-    const Digraph& g = pCellT->tree();
+    const Digraph& g = pCellT.tree();
 
     for (Digraph::ArcIt arc(g); arc != lemon::INVALID; ++arc) {
         Node parent = g.source(arc);
         Node child  = g.target(arc);
 
-        const std::string& parentLabel  = pCellT->label(parent);
-        const std::string& childLabel   = pCellT->label(child);
+        const std::string& parentLabel  = pCellT.label(parent);
+        const std::string& childLabel   = pCellT.label(child);
         const std::string& parentTissue = tissueMap[parent];
         const std::string& childTissue  = tissueMap[child];
 
