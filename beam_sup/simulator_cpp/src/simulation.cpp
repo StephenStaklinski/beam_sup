@@ -148,8 +148,8 @@ void Simulation::updateAnatomicalSiteFactors()
       _anatomicalSiteFactors[s][X] = std::max(0.0, 1 - double(nrCells_sX) / (_K * X.size()));
     }
 
-    // Mark site as active if it has more than 5000 cells (detectable threshold)
-    if (nrCells_s > 5000) {
+    // Mark site as active if it has more cells than the detectable level set
+    if (nrCells_s > 0) {
       ++_nrActiveAnatomicalSites;
       _isActiveAnatomicalSite[s] = true;
     } else if (nrCells_s == 0) {
@@ -264,7 +264,7 @@ bool Simulation::simulate()
     if (_generation % 25 == 0 || _generation == 0) {
       std::cout << "Generation: " << _generation
           << ", Total cells: " << _nrExtantCells
-          << ", Detectable anatomical sites: " << _nrActiveAnatomicalSites
+          << ", Total tissues: " << _nrActiveAnatomicalSites
           << std::endl;
     }
 
