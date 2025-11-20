@@ -26,7 +26,7 @@ def simulate_metastatic_cancer_population(
     Simulates a metastatic cancer population using an external 'simulate' executable.
 
     Args:
-        outdir (str): Output directory for simulation results.
+        outdir (str): Output directory for simulation results. Must be unique since reruns will remove existing files in this directory.
         num_generations (int, optional): Number of generations to simulate. Default is 250.
         migration_rate (str or float, optional): Migration rate between anatomical sites. Default is "1e-6".
         num_cells_downsample (int, optional): Number of cells to downsample in the output. Default is 50.
@@ -55,9 +55,6 @@ def simulate_metastatic_cancer_population(
 
     os.makedirs(outdir, exist_ok=True)
 
-    outprefix = f"{outdir}/{seed}" if str(seed) not in outdir else outdir
-    os.makedirs(outprefix, exist_ok=True)
-
     cmd = [
         simulate_exe,
         "-c",
@@ -67,7 +64,7 @@ def simulate_metastatic_cancer_population(
         "-s",
         str(seed),
         "-o",
-        outprefix,
+        outdir,
         "-ns",
         str(num_possible_tissues),
         "-m",
@@ -80,28 +77,32 @@ def simulate_metastatic_cancer_population(
         str(migration_end_generation),
     ]
 
-    logfile = os.path.join(outprefix, f"{seed}_terminal.log")
+    logfile = os.path.join(outdir, f"{seed}_terminal.log")
     with open(logfile, "w") as logf:
         subprocess.run(cmd, check=True, stdout=logf, stderr=subprocess.STDOUT)
 
     if rerun_no_migrations:
         # Check if migrations occurred by inspecting the simulation output
         # If no migrations, then repeat simulation
-        nwk = glob.glob(os.path.join(outprefix, "*.nwk"))[0]
-        labeling = glob.glob(os.path.join(outprefix, "*.vertex.labeling"))[0]
+        nwk = glob.glob(os.path.join(outdir, "*.nwk"))[0]
+        labeling = glob.glob(os.path.join(outdir, "*.vertex.labeling"))[0]
         migrations = get_num_migrations_from_nwk_and_labeling(nwk, labeling)
         if int(migrations) == 0:
             print(
                 f"No migrations detected in simulation with seed {seed}. Rerunning simulation."
             )
-            shutil.rmtree(outprefix)
+            for file in glob.glob(os.path.join(outdir, "*")):
+                os.remove(file) # Reset outdir for new simulation seed
             # Rerun simulation with a new random seed
             return simulate_metastatic_cancer_population(
                 outdir,
                 num_generations=num_generations,
                 migration_rate=migration_rate,
                 num_cells_downsample=num_cells_downsample,
+                num_possible_tissues=num_possible_tissues,
                 max_anatomical_sites=max_anatomical_sites,
+                migration_start_generation=migration_start_generation,
+                migration_end_generation=migration_end_generation,
                 rerun_no_migrations=rerun_no_migrations,
                 seed=None,
             )

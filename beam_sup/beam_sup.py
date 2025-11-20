@@ -371,7 +371,7 @@ def run_full_simulation():
         description="Run metastatic cancer population simulation and overlay CRISPR barcode data."
     )
     parser.add_argument(
-        "--outdir", default="./", help="Output directory for simulation results."
+        "--outdir", default="./", help="Output directory for simulation results. Must be unique since reruns will remove existing files in this directory."
     )
     parser.add_argument(
         "--num_generations",
@@ -467,11 +467,13 @@ def run_full_simulation():
         raise FileNotFoundError(
             f"Ground truth tree file (.nwk) not found in {seed_dir}."
         )
+    ground_truth_tree_seed = os.path.basename(ground_truth_tree).split(".")[0].replace("cell_tree_seed","")
+    outprefix = os.path.join(args.outdir, ground_truth_tree_seed)
 
     # Overlay simulated CRISPR barcode data
     overlay_simulated_crispr_barcode_data(
         ground_truth_tree_filepath=ground_truth_tree,
-        outprefix=os.path.join(seed_dir, str(seed)),
+        outprefix=outprefix,
         num_sites=args.num_sites,
         mutationrate=args.mutationrate,
         heritable_silencing_rate=args.heritable_silencing_rate,

@@ -190,6 +190,38 @@ int main(int argc, char** argv)
 
     std::cout << "Starting simulation with seed " << seed << "." << std::endl;
 
+    // Print simulation parameters
+    std::cout << std::endl;
+    std::cout << "Simulation Parameters:" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Seed: " << seed << std::endl;
+    std::cout << "Output Directory: " << outputDirectory << std::endl;
+    std::cout << "Carrying Capacity: " << K << std::endl;
+    std::cout << "Mutation Frequency Threshold: " << mutFreqThreshold << std::endl;
+    std::cout << "Mutation Rate: " << mutationRate << std::endl;
+    std::cout << "Driver Probability: " << driverProb << std::endl;
+    std::cout << "Max Number of Anatomical Sites: " << maxNrAnatomicalSites << std::endl;
+    std::cout << "Max Generations: " << maxGenerations << std::endl;
+    std::cout << "Downsample Cell Number: " << downsampleCellNumber << std::endl;
+    std::cout << "Input Number of Possible Anatomical Sites: " << inputNumPossibleAnatomicalSites << std::endl;
+    std::cout << "Migration Start Generation: " << migrationStartGeneration << std::endl;
+    std::cout << "Migration End Generation: " << migrationEndGeneration << std::endl;
+    std::cout << "Resolve Polytomies: " << (resolvePolytomies ? "true" : "false") << std::endl;
+    std::cout << "Migration Transition Probabilities: " << std::endl;
+    for (const auto& row : migrationTransitionProbs) {
+      for (const auto& value : row) {
+        std::cout << value << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << "Migration Rates: ";
+    for (const auto& rate : migrationRates) {
+      std::cout << rate << " ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+    
+
     // Create simulation object with parameters
     Simulation simulation(K,
               migrationRates,
