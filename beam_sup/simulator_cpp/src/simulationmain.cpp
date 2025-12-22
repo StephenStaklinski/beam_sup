@@ -81,7 +81,7 @@ int main(int argc, char** argv)
   lemon::ArgParser ap(argc, argv);
   ap.refOption("s", "Random number generator seed (default: 0)", seed, false)
   .refOption("ns", "Number of possible anatomical sites for default uniform migration matrix when not providing one as input (default: 10)", inputNumPossibleAnatomicalSites)
-  .refOption("m", "Filepath to a csv file of a square migration probability matrix with rows sum to 1 and diagonal elements 0 (default: Uniform probabilities)", filenameMigrationMatrix, false)
+  .refOption("tm", "Filepath to a csv file of a square migration probability matrix with rows sum to 1 and diagonal elements 0 (default: Uniform probabilities)", filenameMigrationMatrix, false)
   .refOption("d", "Driver probability (default: 1e-7)", driverProb)
   .refOption("f", "Mutation frequency threshold (default: 0.05)", mutFreqThreshold)
   .refOption("k", "Carrying capacity (default: 5e4)", K)

@@ -8,8 +8,6 @@ import random
 import pickle as pkl
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -97,9 +95,7 @@ def get_consensus_graph(
 
     # Process trees in parallel
     with Pool(processes=cores) as pool:
-        all_counts = pool.map(
-            _process_tree_wrapper, [(tree, primary_tissue) for tree in trees_to_analyze]
-        )
+        all_counts = pool.map(_process_tree_wrapper, [(tree, primary_tissue) for tree in trees_to_analyze])
 
     # Calculate consensus graph
     prob = 1 / len(all_counts)
@@ -184,7 +180,9 @@ def get_all_posterior_metastasis_times(
     total_time: float,
     primary_tissue: Optional[str] = None,
     burnin_percent: float = DEFAULT_BURNIN_PERCENT,
+    cores : int = DEFAULT_CORES,
     output_prefix: Optional[str] = None,
+    verify_ultrametric: bool = False,
 ) -> Dict[str, Dict[str, Tuple[float, float]]]:
     """
     Calculate metastasis times for all trees in the posterior distribution.
@@ -194,8 +192,10 @@ def get_all_posterior_metastasis_times(
         total_time: Total time of the experiment
         primary_tissue: Optional tissue label for the primary site. If not provided, must be set globally.
         burnin_percent: Percentage of trees to discard as burnin
+        cores: Number of CPU cores to use for parallel processing.
         output_prefix: Optional prefix for output files. If provided, results will be written to {output_prefix}.pkl
-
+        verify_ultrametric: Whether to verify that each tree is ultrametric. Default is False.
+        
     Returns:
         Dict[str, Dict[str, Tuple[float, float]]]: Dictionary mapping tree labels to dictionaries of metastasis events.
         Each metastasis event is a tuple of (start_time, end_time) for the migration.
@@ -233,13 +233,14 @@ def get_all_posterior_metastasis_times(
         newick = newick.replace("'", "")  # Remove quoted node names
         ete_tree = Tree(newick, format=3)
 
-        # Verify tree is ultrametric
-        root = ete_tree.get_tree_root()
-        leaf_distances = set()
-        for leaf in ete_tree.iter_leaves():
-            leaf_distances.add(round(root.get_distance(leaf.name), 3))
-        if len(leaf_distances) != 1:
-            raise ValueError("Tree is not ultrametric")
+        if verify_ultrametric:
+            # Verify tree is ultrametric
+            root = ete_tree.get_tree_root()
+            leaf_distances = set()
+            for leaf in ete_tree.iter_leaves():
+                leaf_distances.add(round(root.get_distance(leaf.name), 3))
+            if len(leaf_distances) != 1:
+                raise ValueError("Tree is not ultrametric")
 
         # Get tree height and calculate origin to root height
         tree_height = ete_tree.get_farthest_leaf()[1]
@@ -258,9 +259,7 @@ def get_all_posterior_metastasis_times(
                 parent_node = node.up
                 parent_tissue = parent_node.name.split("_")[-1]
                 root = ete_tree.get_tree_root()
-                parent_time = origin_to_root_height + root.get_distance(
-                    parent_node.name
-                )
+                parent_time = origin_to_root_height + root.get_distance(parent_node.name)
                 node_time = origin_to_root_height + root.get_distance(node.name)
 
             node_tissue = node.name.split("_")[-1]
@@ -273,13 +272,8 @@ def get_all_posterior_metastasis_times(
                     migration = migration + "_1"
                     met_times[migration] = migration_time
                 else:
-                    existing_migrations = [
-                        key for key in met_times.keys() if migration in key
-                    ]
-                    i = (
-                        max([int(key.split("_")[-1]) for key in existing_migrations])
-                        + 1
-                    )
+                    existing_migrations = [key for key in met_times.keys() if migration in key]
+                    i = (max([int(key.split("_")[-1]) for key in existing_migrations]) + 1)
                     migration = migration + "_" + str(i)
                     met_times[migration] = migration_time
 

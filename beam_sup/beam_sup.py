@@ -47,7 +47,7 @@ class BeamResults:
                 os.makedirs(output_dir, exist_ok=True)
 
     def __init__(
-        self, trees_file: str, log_file: str, primary_tissue: str, total_time: float
+        self, trees_file: str, log_file: str, primary_tissue: str, total_time: float, cores: int = DEFAULT_CORES
     ) -> None:
         """
         Initialize BeamResults with BEAM output files.
@@ -65,6 +65,7 @@ class BeamResults:
         self.trees, self.log_data = load_beam_files(trees_file, log_file)
         self.consensus_graph = None
         self.metastasis_times = None
+        self.cores = cores
 
     def info(self) -> None:
         """Print information about the loaded data."""
@@ -148,7 +149,6 @@ class BeamResults:
     def get_consensus_graph(
         self,
         burnin_percent: float = DEFAULT_BURNIN_PERCENT,
-        cores: int = DEFAULT_CORES,
         output_file: Optional[str] = None,
         force_recompute: bool = False,
     ) -> Dict[str, float]:
@@ -157,7 +157,6 @@ class BeamResults:
 
         Args:
             burnin_percent: Percentage of trees to discard as burnin
-            cores: Number of CPU cores to use for parallel processing
             output_file: Optional path to write the consensus graph to a file
             force_recompute: If True, forces recalculation of consensus graph even if already computed
 
@@ -171,7 +170,7 @@ class BeamResults:
         # Only compute consensus graph if not already computed or if force_recompute is True
         if self.consensus_graph is None or force_recompute:
             self.consensus_graph = get_consensus_graph(
-                self.trees, self.primary_tissue, burnin_percent, cores
+                self.trees, self.primary_tissue, burnin_percent, self.cores
             )
 
         if output_file:
@@ -332,6 +331,7 @@ class BeamResults:
                 primary_tissue=self.primary_tissue,
                 burnin_percent=burnin_percent,
                 output_prefix=output_prefix,
+                cores=self.cores
             )
 
         # Get consensus graph if not already computed
@@ -439,6 +439,12 @@ def run_full_simulation():
         default=0.01,
         help="Rate of stochastic silencing of CRISPR cassettes.",
     )
+    parser.add_argument(
+        "--transition_matrix_filepath",
+        type=str,
+        default=None,
+        help="File path to a custom transition matrix CSV file.",
+    )
 
     args = parser.parse_args()
 
@@ -452,6 +458,7 @@ def run_full_simulation():
         max_anatomical_sites=args.max_anatomical_sites,
         migration_start_generation=args.migration_start_generation,
         migration_end_generation=args.migration_end_generation,
+        transition_matrix_filepath=args.transition_matrix_filepath,
         seed=args.seed,
     )
 

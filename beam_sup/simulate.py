@@ -19,6 +19,7 @@ def simulate_metastatic_cancer_population(
     max_anatomical_sites: int = -1,
     migration_start_generation: int = 0,
     migration_end_generation: int = -1,
+    transition_matrix_filepath: str | None = None,
     rerun_no_migrations: bool = True,
     seed: int | None = None,
 ) -> int:
@@ -34,6 +35,7 @@ def simulate_metastatic_cancer_population(
         max_anatomical_sites (int, optional): Maximum number of anatomical sites. Default is -1 (no limit).
         migration_start_generation (int, optional): Generation at which migrations can start occurring. Default is 0.
         migration_end_generation (int, optional): Generation after which migrations stop occurring. Default is -1 (no limit).
+        transition_matrix_filepath (str | None, optional): File path to a custom transition matrix CSV file. Default is None.
         rerun_no_migrations (bool, optional): If True, rerun the simulation if no migration events occured. Default is True.
         seed (int | None, optional): Random seed for reproducibility. If None, a random seed is generated.
 
@@ -75,6 +77,8 @@ def simulate_metastatic_cancer_population(
         str(migration_start_generation),
         "-ge",
         str(migration_end_generation),
+        "-tm",
+        str(transition_matrix_filepath) if transition_matrix_filepath else "",
     ]
 
     logfile = os.path.join(outdir, f"{seed}_terminal.log")
@@ -103,6 +107,7 @@ def simulate_metastatic_cancer_population(
                 max_anatomical_sites=max_anatomical_sites,
                 migration_start_generation=migration_start_generation,
                 migration_end_generation=migration_end_generation,
+                transition_matrix_filepath=transition_matrix_filepath,
                 rerun_no_migrations=rerun_no_migrations,
                 seed=None,
             )
