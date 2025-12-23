@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .config import DEFAULT_BURNIN_PERCENT, DEFAULT_CORES, DEFAULT_NUM_SAMPLES
 
 
-def _process_tree_for_consensus(tree, primary_tissue):
+def process_tree_for_consensus(tree, primary_tissue):
     """Process a single tree to get migration counts."""
     # Convert to ete3 tree
     tree_copy = deepcopy(tree)
@@ -49,10 +49,10 @@ def _process_tree_for_consensus(tree, primary_tissue):
     return counts
 
 
-def _process_tree_wrapper(args):
+def _process_tree_for_consensus_wrapper(args):
     """Wrapper function for parallel processing of trees."""
     tree, primary_tissue = args
-    return _process_tree_for_consensus(tree, primary_tissue)
+    return process_tree_for_consensus(tree, primary_tissue)
 
 
 def get_consensus_graph(
@@ -95,7 +95,7 @@ def get_consensus_graph(
 
     # Process trees in parallel
     with Pool(processes=cores) as pool:
-        all_counts = pool.map(_process_tree_wrapper, [(tree, primary_tissue) for tree in trees_to_analyze])
+        all_counts = pool.map(_process_tree_for_consensus_wrapper, [(tree, primary_tissue) for tree in trees_to_analyze])
 
     # Calculate consensus graph
     prob = 1 / len(all_counts)
@@ -175,6 +175,85 @@ def sample_trees(
     return sampled_trees
 
 
+def process_tree_for_metastasis_times(tree, primary_tissue, total_time, verify_ultrametric=False):
+    # Create a copy to modify
+    tree_copy = tree.clone()
+
+    # Process each node to add names and preserve location annotations
+    i = 0
+    for node in tree_copy.preorder_node_iter():
+        try:
+            prediction = (
+                node.taxon.label + "_" + node.annotations.get_value("location")
+            )
+            node.taxon.label = prediction
+        except Exception:
+            prediction = f"node{i}" + "_" + node.annotations.get_value("location")
+            i += 1
+        node.label = prediction
+
+    # Convert to newick string and create ete3 tree
+    newick = tree_copy.as_string(
+        schema="newick",
+        suppress_edge_lengths=False,
+        node_label_element_separator=",",
+    )
+    newick = newick.replace("'", "")  # Remove quoted node names
+    ete_tree = Tree(newick, format=3)
+
+    if verify_ultrametric:
+        # Verify tree is ultrametric
+        root = ete_tree.get_tree_root()
+        leaf_distances = set()
+        for leaf in ete_tree.iter_leaves():
+            leaf_distances.add(round(root.get_distance(leaf.name), 3))
+        if len(leaf_distances) != 1:
+            raise ValueError("Tree is not ultrametric")
+
+    # Get tree height and calculate origin to root height
+    tree_height = ete_tree.get_farthest_leaf()[1]
+    origin_to_root_height = total_time - tree_height
+
+    # Calculate metastasis times
+    met_times = {}
+    migrations = set()
+
+    for node in ete_tree.traverse("levelorder"):
+        if node.is_root():
+            parent_tissue = primary_tissue
+            parent_time = 0  # origin is at start of experiment
+            node_time = origin_to_root_height
+        else:
+            parent_node = node.up
+            parent_tissue = parent_node.name.split("_")[-1]
+            root = ete_tree.get_tree_root()
+            parent_time = origin_to_root_height + root.get_distance(parent_node.name)
+            node_time = origin_to_root_height + root.get_distance(node.name)
+
+        node_tissue = node.name.split("_")[-1]
+
+        if node_tissue != parent_tissue:
+            migration = f"{parent_tissue}_{node_tissue}"
+            migration_time = (parent_time, node_time)
+            if migration not in migrations:
+                migrations.add(migration)
+                migration = migration + "_1"
+                met_times[migration] = migration_time
+            else:
+                existing_migrations = [key for key in met_times.keys() if migration in key]
+                i = (max([int(key.split("_")[-1]) for key in existing_migrations]) + 1)
+                migration = migration + "_" + str(i)
+                met_times[migration] = migration_time
+
+    return met_times
+
+
+def _process_tree_for_times_wrapper(args):
+    """Wrapper function for parallel processing of trees for metastasis times."""
+    tree, primary_tissue, total_time, verify_ultrametric = args
+    return process_tree_for_metastasis_times(tree, primary_tissue, total_time, verify_ultrametric)
+
+
 def get_all_posterior_metastasis_times(
     trees: dendropy.TreeList,
     total_time: float,
@@ -204,81 +283,15 @@ def get_all_posterior_metastasis_times(
     # Apply burnin
     num_discard = round(len(trees) * burnin_percent)
     trees_to_analyze = trees[num_discard:]
-
     all_met_events = {}
-
-    for tree in trees_to_analyze:
-        # Create a copy to modify
-        tree_copy = tree.clone()
-
-        # Process each node to add names and preserve location annotations
-        i = 0
-        for node in tree_copy.preorder_node_iter():
-            try:
-                prediction = (
-                    node.taxon.label + "_" + node.annotations.get_value("location")
-                )
-                node.taxon.label = prediction
-            except Exception:
-                prediction = f"node{i}" + "_" + node.annotations.get_value("location")
-                i += 1
-            node.label = prediction
-
-        # Convert to newick string and create ete3 tree
-        newick = tree_copy.as_string(
-            schema="newick",
-            suppress_edge_lengths=False,
-            node_label_element_separator=",",
-        )
-        newick = newick.replace("'", "")  # Remove quoted node names
-        ete_tree = Tree(newick, format=3)
-
-        if verify_ultrametric:
-            # Verify tree is ultrametric
-            root = ete_tree.get_tree_root()
-            leaf_distances = set()
-            for leaf in ete_tree.iter_leaves():
-                leaf_distances.add(round(root.get_distance(leaf.name), 3))
-            if len(leaf_distances) != 1:
-                raise ValueError("Tree is not ultrametric")
-
-        # Get tree height and calculate origin to root height
-        tree_height = ete_tree.get_farthest_leaf()[1]
-        origin_to_root_height = total_time - tree_height
-
-        # Calculate metastasis times
-        met_times = {}
-        migrations = set()
-
-        for node in ete_tree.traverse("levelorder"):
-            if node.is_root():
-                parent_tissue = primary_tissue
-                parent_time = 0  # origin is at start of experiment
-                node_time = origin_to_root_height
-            else:
-                parent_node = node.up
-                parent_tissue = parent_node.name.split("_")[-1]
-                root = ete_tree.get_tree_root()
-                parent_time = origin_to_root_height + root.get_distance(parent_node.name)
-                node_time = origin_to_root_height + root.get_distance(node.name)
-
-            node_tissue = node.name.split("_")[-1]
-
-            if node_tissue != parent_tissue:
-                migration = f"{parent_tissue}_{node_tissue}"
-                migration_time = (parent_time, node_time)
-                if migration not in migrations:
-                    migrations.add(migration)
-                    migration = migration + "_1"
-                    met_times[migration] = migration_time
-                else:
-                    existing_migrations = [key for key in met_times.keys() if migration in key]
-                    i = (max([int(key.split("_")[-1]) for key in existing_migrations]) + 1)
-                    migration = migration + "_" + str(i)
-                    met_times[migration] = migration_time
-
-        # Store results with tree label
-        all_met_events[tree.label] = met_times
+    
+    with Pool(processes=cores) as pool:
+        all_times = pool.map(_process_tree_for_times_wrapper, [(tree, primary_tissue, total_time, verify_ultrametric) for tree in trees_to_analyze])
+    
+    # Store results with tree label
+    for i, (tree, met_times) in enumerate(zip(trees_to_analyze, all_times)):
+        tree_label = tree.label if tree.label else f"tree_{i+1}"
+        all_met_events[tree_label] = met_times
 
     # Save results if output_prefix is provided
     if output_prefix:
