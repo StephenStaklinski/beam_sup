@@ -1,5 +1,4 @@
 import pandas as pd
-import cassiopeia as cas
 from ete3 import Tree
 
 
@@ -14,6 +13,9 @@ def infer_parsimony_tree_cassiopeia_greedy(
         character_matrix_tsv (str): Path to the input character matrix TSV file.
         outdir (str): Output directory prefix for saving the inferred tree.
     """
+    # Locally import cassiopeia to avoid hard dependency that slows initial setup
+    import cassiopeia as cas
+    
     # read in final matrix
     final_matrix = pd.read_csv(character_matrix_tsv, sep="\t", index_col=0)
     final_matrix.index = final_matrix.index.astype(str)

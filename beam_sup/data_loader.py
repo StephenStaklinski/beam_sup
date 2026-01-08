@@ -1,10 +1,10 @@
 import os
 import pandas as pd
-import dendropy
-from typing import Tuple, Optional
+from dendropy import TreeList
+from typing import Tuple
 
 
-def load_trees_file(trees_file: str) -> dendropy.TreeList:
+def load_trees_file(trees_file: str) -> TreeList:
     """
     Load and parse a BEAM trees file.
 
@@ -12,14 +12,14 @@ def load_trees_file(trees_file: str) -> dendropy.TreeList:
         trees_file: Path to the .trees file
 
     Returns:
-        dendropy.TreeList: The loaded trees
+        TreeList: The loaded trees
     """
     if not os.path.exists(trees_file):
         raise FileNotFoundError(f"Trees file not found: {trees_file}")
 
     try:
         # Try loading as NEXUS format
-        trees = dendropy.TreeList.get(path=trees_file, schema="nexus")
+        trees = TreeList.get(path=trees_file, schema="nexus")
     except Exception as e:
         raise ValueError(f"Failed to load trees file: {e}")
 
@@ -53,7 +53,7 @@ def load_log_file(log_file: str) -> pd.DataFrame:
 
 def load_beam_files(
     trees_file: str, log_file: str
-) -> Tuple[dendropy.TreeList, pd.DataFrame]:
+) -> Tuple[TreeList, pd.DataFrame]:
     """
     Load both BEAM output files.
 
@@ -67,5 +67,9 @@ def load_beam_files(
             - pd.DataFrame: The loaded log data
     """
     trees = load_trees_file(trees_file)
-    log_data = load_log_file(log_file)
+    
+    log_data = None
+    if log_file is not None:
+        log_data = load_log_file(log_file)
+        
     return trees, log_data

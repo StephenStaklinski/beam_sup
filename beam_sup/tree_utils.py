@@ -1,8 +1,8 @@
 
 import sys
-from Bio import Phylo
+from Bio.Phylo import read as phylo_read, write as phylo_write
 from ete3 import Tree
-import dendropy
+from dendropy import Tree as dendropyTree
 
 
 def convert_newick_to_nexus(newick_file: str, outfile: str) -> None:
@@ -15,8 +15,8 @@ def convert_newick_to_nexus(newick_file: str, outfile: str) -> None:
     Returns:
         str: Path to the output Nexus file.
     """
-    tree = Phylo.read(newick_file, "newick")
-    Phylo.write(tree, outfile, "nexus")
+    tree = phylo_read(newick_file, "newick")
+    phylo_write(tree, outfile, "nexus")
 
 
 def convert_nexus_to_newick(nexus_file: str, outfile: str) -> None:
@@ -34,12 +34,12 @@ def convert_nexus_to_newick(nexus_file: str, outfile: str) -> None:
         if hasattr(clade, "branch_length"):
             del clade.branch_length
 
-    tree = Phylo.read(nexus_file, "nexus")
+    tree = phylo_read(nexus_file, "nexus")
     tree.rooted = True  # ensure the tree is rooted
     tree.format = "newick"
     for clade in tree.find_clades():
         remove_annotations_and_features(clade)
-    Phylo.write(tree, outfile, "newick", plain=True)
+    phylo_write(tree, outfile, "newick", plain=True)
 
 
 def get_num_migrations_from_nwk_and_labeling(nwk: str, labeling_tsv: str) -> int:
@@ -192,7 +192,7 @@ def remove_tissues_from_tree(nwk_file: str, out_file: str) -> None:
     """
 
     # Read the tree (DendroPy preserves underscores by default)
-    tree = dendropy.Tree.get(
+    tree = dendropyTree.get(
         path=nwk_file,
         schema="newick",
         preserve_underscores=True

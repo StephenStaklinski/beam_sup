@@ -1,11 +1,8 @@
-import sys
 import os
 import random
 from collections import Counter
 from ete3 import Tree
-import cassiopeia as cas
 import pandas as pd
-import networkx as nx
 
 
 def run_parsimony_migration_cassiopeia_fitchcount(
@@ -19,7 +16,9 @@ def run_parsimony_migration_cassiopeia_fitchcount(
         tissues_file: Path to the CSV file mapping cells to tissues.
         outdir: Output directory to save results.
     """
-
+    # Locally import cassiopeia to avoid hard dependency that slows initial setup
+    import cassiopeia as cas
+    
     # Read in newick to ete3 tree
     ete_tree = Tree(newick_file, format=3)
     ete_tree.name = "root"

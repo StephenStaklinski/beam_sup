@@ -1,38 +1,16 @@
 import argparse
 from typing import Optional, Dict, List, Union, Tuple
-import dendropy
-import numpy as np
-import pandas as pd
+from dendropy import TreeList
 import os
 
-from .data_loader import load_beam_files
-from .plotting import (
-    plot_parameters,
-    plot_probability_graph,
-    plot_thresholded_graph,
-    plot_sampled_tree,
-    plot_metastasis_timing,
-    plot_rate_matrix,
-)
-from .posterior_processing import (
-    get_consensus_graph,
-    sample_trees,
-    get_all_posterior_metastasis_times,
-    compute_posterior_mutual_info,
-)
-from .config import (
-    DEFAULT_BURNIN_PERCENT,
-    DEFAULT_CORES,
-    DEFAULT_MIN_PROB_THRESHOLD,
-)
-from .simulate import (
-    simulate_metastatic_cancer_population,
-    overlay_simulated_crispr_barcode_data,
-)
+
+DEFAULT_BURNIN = 0.0
+DEFAULT_CORES = 1
+DEFAULT_MIN_PROB_THRESHOLD = 0.5
 
 
 class BeamResults:
-    """A class to handle BEAM output analysis."""
+    """A class to handle migration graph posterior distribution analysis."""
 
     def _ensure_output_dir(self, filepath: Optional[str]) -> None:
         """
@@ -47,17 +25,21 @@ class BeamResults:
                 os.makedirs(output_dir, exist_ok=True)
 
     def __init__(
-        self, trees_file: str, log_file: str, primary_tissue: str, total_time: float, cores: int = DEFAULT_CORES
+        self, trees_file: str, primary_tissue: str, total_time: float, log_file: str = None, cores: int = DEFAULT_CORES, state_key: str = "location", burnin: float = DEFAULT_BURNIN
     ) -> None:
         """
         Initialize BeamResults with BEAM output files.
 
         Args:
             trees_file: Path to the .trees file
-            log_file: Path to the .log file
             primary_tissue: Primary tissue label for migration analysis
             total_time: Total time of the experiment
+            log_file: Path to the .log file (optional)
+            state_key: Key in the node annotations for tissue states. Default is "location".
+            cores: Number of CPU threads to use for parallel processing
         """
+        from .data_loader import load_beam_files
+        
         self.trees_file = trees_file
         self.log_file = log_file
         self.primary_tissue = primary_tissue
@@ -66,6 +48,8 @@ class BeamResults:
         self.consensus_graph = None
         self.metastasis_times = None
         self.cores = cores
+        self.state_key = state_key
+        self.burnin = burnin
 
     def info(self) -> None:
         """Print information about the loaded data."""
@@ -77,6 +61,7 @@ class BeamResults:
         print(f"Total time: {self.total_time}")
         print(f"\nTrees:")
         print(f"  Number of trees: {len(self.trees)}")
+        print(f"  Number of taxa: {len(self.trees.taxon_namespace.labels())}")
         print(f"  Taxa: {', '.join(self.trees.taxon_namespace.labels())}")
         print(f"\nLog Data:")
         print(f"  Number of samples: {len(self.log_data)}")
@@ -124,12 +109,12 @@ class BeamResults:
         }
         return stats
 
-    def get_trees(self) -> dendropy.TreeList:
+    def get_trees(self) -> TreeList:
         """
         Get the loaded trees.
 
         Returns:
-            dendropy.TreeList: The loaded trees
+            TreeList: The loaded trees
         """
         return self.trees
 
@@ -143,12 +128,12 @@ class BeamResults:
             output_file: Path to save the plot.
             parameter: Specific parameter to plot. If None, plots all parameters.
         """
+        from .plotting import plot_parameters
         self._ensure_output_dir(output_file)
         plot_parameters(self.log_data, output_file, parameter)
 
     def get_consensus_graph(
         self,
-        burnin_percent: float = DEFAULT_BURNIN_PERCENT,
         output_file: Optional[str] = None,
         force_recompute: bool = False,
     ) -> Dict[str, float]:
@@ -156,13 +141,13 @@ class BeamResults:
         Calculate consensus graph from migration counts in trees.
 
         Args:
-            burnin_percent: Percentage of trees to discard as burnin
             output_file: Optional path to write the consensus graph to a file
             force_recompute: If True, forces recalculation of consensus graph even if already computed
 
         Returns:
             Dict[str, float]: Dictionary mapping migration patterns to their probabilities
         """
+        from .posterior_processing import get_consensus_graph
 
         if self.trees is None or len(self.trees) == 0:
             raise ValueError("No trees to analyze")
@@ -170,7 +155,7 @@ class BeamResults:
         # Only compute consensus graph if not already computed or if force_recompute is True
         if self.consensus_graph is None or force_recompute:
             self.consensus_graph = get_consensus_graph(
-                self.trees, self.primary_tissue, burnin_percent, self.cores
+                self.trees, self.primary_tissue, self.burnin, self.cores, self.state_key
             )
 
         if output_file:
@@ -193,6 +178,7 @@ class BeamResults:
         Args:
             output_file: Path to save the plot.
         """
+        from .plotting import plot_probability_graph
         if self.consensus_graph is None:
             # Compute consensus graph if not already available
             self.get_consensus_graph()
@@ -218,6 +204,7 @@ class BeamResults:
             output_file_prefix: Prefix for output files. Each file will be named {prefix}_{threshold}.pdf
             threshold: Single threshold value or list of thresholds for filtering edges
         """
+        from .plotting import plot_thresholded_graph
         if self.consensus_graph is None:
             # Compute consensus graph if not already available
             self.get_consensus_graph()
@@ -236,8 +223,7 @@ class BeamResults:
         self,
         output_file_matrix: Optional[str] = None,
         output_file_information: Optional[str] = None,
-        threads: int = 1,
-    ) -> Tuple[float, np.ndarray, List[str]]:
+    ) -> Tuple[float, 'np.ndarray', List[str]]:
         """Calculate mutual information from migration patterns in the trees.
 
         Args:
@@ -251,6 +237,8 @@ class BeamResults:
                 - Count matrix as numpy array
                 - List of tissue names in order
         """
+        from .posterior_processing import compute_posterior_mutual_info
+        
         if self.trees is None:
             raise ValueError("Trees must be loaded before computing mutual information")
 
@@ -262,16 +250,16 @@ class BeamResults:
         return compute_posterior_mutual_info(
             trees=self.trees,
             primary_tissue=self.primary_tissue,
-            threads=threads,
+            cores=self.cores,
             output_file_matrix=output_file_matrix,
             output_file_information=output_file_information,
+            state_key=self.state_key,
         )
 
     def sample_and_plot_trees(
         self,
         n: int = 1,
         output_prefix: str = None,
-        burnin_percent: float = DEFAULT_BURNIN_PERCENT,
     ) -> None:
         """
         Sample trees from the posterior and plot them with their migration graphs.
@@ -279,13 +267,15 @@ class BeamResults:
         Args:
             n: Number of trees to sample
             output_prefix: Prefix for output files.
-            burnin_percent: Percentage of trees to discard as burnin
         """
+        from .posterior_processing import sample_trees
+        from .plotting import plot_sampled_tree
+        
         self._ensure_output_dir(output_prefix)
 
         # Sample trees
         sampled_trees = sample_trees(
-            self.trees, n=n, burnin_percent=burnin_percent, output_prefix=output_prefix
+            self.trees, n=n, burnin_percent=self.burnin, output_prefix=output_prefix, state_key=self.state_key
         )
 
         # Plot each tree
@@ -296,11 +286,11 @@ class BeamResults:
                 total_time=self.total_time,
                 output_prefix=output_prefix,
                 tree_num=i,
+                state_key=self.state_key
             )
 
     def get_metastasis_times(
         self,
-        burnin_percent: float = DEFAULT_BURNIN_PERCENT,
         min_prob_threshold: float = DEFAULT_MIN_PROB_THRESHOLD,
         output_prefix: str = None,
         force_recompute: bool = False,
@@ -309,7 +299,6 @@ class BeamResults:
         Calculate metastasis times for all trees in the posterior distribution.
 
         Args:
-            burnin_percent: Percentage of trees to discard as burnin
             min_prob_threshold: Minimum probability threshold for migrations to include in plots
             output_prefix: Prefix for output files:
                 - Metastasis times will be written to {output_prefix}.pkl
@@ -320,6 +309,9 @@ class BeamResults:
             Dict[str, Dict[str, Tuple[float, float]]]: Dictionary mapping tree labels to dictionaries of metastasis events.
             Each metastasis event is a tuple of (start_time, end_time) for the migration.
         """
+        from .posterior_processing import get_all_posterior_metastasis_times
+        from .plotting import plot_metastasis_timing
+        
         self._ensure_output_dir(output_prefix)
 
         # Only compute metastasis times if not already computed or if force_recompute is True
@@ -329,9 +321,10 @@ class BeamResults:
                 self.trees,
                 total_time=self.total_time,
                 primary_tissue=self.primary_tissue,
-                burnin_percent=burnin_percent,
+                burnin_percent=self.burnin,
                 output_prefix=output_prefix,
-                cores=self.cores
+                cores=self.cores,
+                state_key=self.state_key
             )
 
         # Get consensus graph if not already computed
@@ -357,6 +350,7 @@ class BeamResults:
         Args:
             output_file: Path to save the plot
         """
+        from .plotting import plot_rate_matrix
         self._ensure_output_dir(output_file)
         plot_rate_matrix(
             data=self.log_data,
@@ -366,6 +360,7 @@ class BeamResults:
 
 
 def run_full_simulation():
+    from .simulate import simulate_metastatic_cancer_population, overlay_simulated_crispr_barcode_data
 
     parser = argparse.ArgumentParser(
         description="Run metastatic cancer population simulation and overlay CRISPR barcode data."

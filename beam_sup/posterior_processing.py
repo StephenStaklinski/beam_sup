@@ -1,8 +1,8 @@
 import os
-from typing import Optional, Dict, List, Union, Tuple
+from typing import Optional, Dict, List, Tuple
 from copy import deepcopy
 from multiprocessing import Pool
-import dendropy
+from dendropy import TreeList
 from ete3 import Tree
 import random
 import pickle as pkl
@@ -11,22 +11,24 @@ import numpy as np
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
-from .config import DEFAULT_BURNIN_PERCENT, DEFAULT_CORES, DEFAULT_NUM_SAMPLES
 
-
-def process_tree_for_consensus(tree, primary_tissue):
+def process_tree_for_consensus(tree, primary_tissue, state_key="location"):
     """Process a single tree to get migration counts."""
     # Convert to ete3 tree
     tree_copy = deepcopy(tree)
     for node in tree_copy.preorder_node_iter():
         try:
-            prediction = node.taxon.label + "_" + node.annotations.get_value("location")
+            prediction = node.taxon.label + "_" + node.annotations.get_value(state_key)
             node.taxon.label = prediction
         except:
-            prediction = f"node_{node.annotations.get_value('location')}"
+            prediction = f"node_{node.annotations.get_value(state_key)}"
         node.label = prediction
 
-    ete_tree = Tree(tree_copy.as_string(schema="newick").replace("'", ""), format=3)
+    newick = tree_copy.as_string(schema="newick", suppress_rooting=True).replace("'", "")
+    try:
+        ete_tree = Tree(newick, format=3)
+    except:
+        ete_tree = Tree(newick, format=1)   # Safe generic loading format
 
     # Get migration counts
     counts = {}
@@ -51,24 +53,26 @@ def process_tree_for_consensus(tree, primary_tissue):
 
 def _process_tree_for_consensus_wrapper(args):
     """Wrapper function for parallel processing of trees."""
-    tree, primary_tissue = args
-    return process_tree_for_consensus(tree, primary_tissue)
+    tree, primary_tissue, state_key = args
+    return process_tree_for_consensus(tree, primary_tissue, state_key)
 
 
 def get_consensus_graph(
-    trees: dendropy.TreeList,
+    trees: TreeList,
     primary_tissue: str,
-    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
-    cores: int = DEFAULT_CORES,
+    burnin_percent: float = 0.0,
+    cores: int = 1,
+    state_key: str = "location",
 ) -> Dict[str, float]:
     """
     Calculate consensus graph from migration counts in trees.
 
     Args:
-        trees (dendropy.TreeList): The trees to analyze
+        trees (TreeList): The trees to analyze
         primary_tissue (str): Primary tissue label for migration analysis
         burnin_percent (float): Percentage of trees to discard as burnin. Default is 0.0 (no burnin).
         cores (int): Number of CPU cores to use for parallel processing. Default is 1 (single core).
+        state_key (str): Annotation key for location states. Default is "location".
 
     Returns:
         Dict[str, float]: Dictionary mapping migration patterns to their probabilities.
@@ -78,8 +82,8 @@ def get_consensus_graph(
     Raises:
         ValueError: If trees is None or empty
     """
-    if not isinstance(trees, dendropy.TreeList):
-        raise ValueError("Trees must be a dendropy.TreeList object")
+    if not isinstance(trees, TreeList):
+        raise ValueError("Trees must be a TreeList object")
 
     if len(trees) == 0:
         raise ValueError("No trees to analyze")
@@ -95,7 +99,7 @@ def get_consensus_graph(
 
     # Process trees in parallel
     with Pool(processes=cores) as pool:
-        all_counts = pool.map(_process_tree_for_consensus_wrapper, [(tree, primary_tissue) for tree in trees_to_analyze])
+        all_counts = pool.map(_process_tree_for_consensus_wrapper, [(tree, primary_tissue, state_key) for tree in trees_to_analyze])
 
     # Calculate consensus graph
     prob = 1 / len(all_counts)
@@ -111,19 +115,21 @@ def get_consensus_graph(
 
 
 def sample_trees(
-    trees: dendropy.TreeList,
-    n: int = DEFAULT_NUM_SAMPLES,
-    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
+    trees: TreeList,
+    n: int = 1,
+    burnin_percent: float = 0.0,
     output_prefix: Optional[str] = None,
+    state_key: str = "location",
 ) -> List[str]:
     """
     Sample trees from the posterior distribution.
 
     Args:
         trees: Dendropy TreeList object
-        n: Number of trees to sample
-        burnin_percent: Percentage of trees to discard as burnin
+        n: Number of trees to sample. Default is 1.
+        burnin_percent: Percentage of trees to discard as burnin. Default is 0.0 (no burnin).
         output_prefix: Optional prefix for output files. If None, trees are not written to file.
+        state_key: Annotation key for location states. Default is "location".
 
     Returns:
         List[str]: List of newick strings for sampled trees with location annotations preserved
@@ -146,24 +152,24 @@ def sample_trees(
         # Process each node to add names and preserve location annotations
         i = 1
         for node in tree_copy.preorder_node_iter():
-            location = node.annotations.get_value("location")
+            location = node.annotations.get_value(state_key)
             if node.taxon:
                 if not node.taxon.label:
                     node.taxon.label = f"node{i}"
                     i += 1
                 # Only add location annotation if it's not already there
-                if "[&location=" not in node.taxon.label:
-                    node.taxon.label = f'{node.taxon.label}[&location="{location}"]'
+                if f"[&{state_key}=" not in node.taxon.label:
+                    node.taxon.label = f'{node.taxon.label}[&{state_key}="{location}"]'
             else:
                 if not node.label:
                     node.label = f"node{i}"
                     i += 1
                 # Only add location annotation if it's not already there
-                if "[&location=" not in node.label:
-                    node.label = f'{node.label}[&location="{location}"]'
+                if f"[&{state_key}=" not in node.label:
+                    node.label = f'{node.label}[&{state_key}="{location}"]'
 
         # Convert to newick string
-        sampled_trees.append(tree_copy.as_string(schema="newick").strip())
+        sampled_trees.append(tree_copy.as_string(schema="newick", suppress_rooting=True).strip())
 
     # Write to file if output_prefix is specified
     if output_prefix:
@@ -175,7 +181,7 @@ def sample_trees(
     return sampled_trees
 
 
-def process_tree_for_metastasis_times(tree, primary_tissue, total_time, verify_ultrametric=False):
+def process_tree_for_metastasis_times(tree, primary_tissue, total_time, state_key="location", verify_ultrametric=False):
     # Create a copy to modify
     tree_copy = tree.clone()
 
@@ -184,11 +190,11 @@ def process_tree_for_metastasis_times(tree, primary_tissue, total_time, verify_u
     for node in tree_copy.preorder_node_iter():
         try:
             prediction = (
-                node.taxon.label + "_" + node.annotations.get_value("location")
+                node.taxon.label + "_" + node.annotations.get_value(state_key)
             )
             node.taxon.label = prediction
         except Exception:
-            prediction = f"node{i}" + "_" + node.annotations.get_value("location")
+            prediction = f"node{i}" + "_" + node.annotations.get_value(state_key)
             i += 1
         node.label = prediction
 
@@ -250,17 +256,18 @@ def process_tree_for_metastasis_times(tree, primary_tissue, total_time, verify_u
 
 def _process_tree_for_times_wrapper(args):
     """Wrapper function for parallel processing of trees for metastasis times."""
-    tree, primary_tissue, total_time, verify_ultrametric = args
-    return process_tree_for_metastasis_times(tree, primary_tissue, total_time, verify_ultrametric)
+    tree, primary_tissue, total_time, state_key, verify_ultrametric = args
+    return process_tree_for_metastasis_times(tree, primary_tissue, total_time, state_key, verify_ultrametric)
 
 
 def get_all_posterior_metastasis_times(
-    trees: dendropy.TreeList,
+    trees: TreeList,
     total_time: float,
     primary_tissue: Optional[str] = None,
-    burnin_percent: float = DEFAULT_BURNIN_PERCENT,
-    cores : int = DEFAULT_CORES,
+    burnin_percent: float = 0.0,
+    cores : int = 1 ,
     output_prefix: Optional[str] = None,
+    state_key: str = "location",
     verify_ultrametric: bool = False,
 ) -> Dict[str, Dict[str, Tuple[float, float]]]:
     """
@@ -270,9 +277,10 @@ def get_all_posterior_metastasis_times(
         trees: Dendropy TreeList object containing the posterior trees
         total_time: Total time of the experiment
         primary_tissue: Optional tissue label for the primary site. If not provided, must be set globally.
-        burnin_percent: Percentage of trees to discard as burnin
-        cores: Number of CPU cores to use for parallel processing.
+        burnin_percent: Percentage of trees to discard as burnin. Default is 0.0 (no burnin).
+        cores: Number of CPU cores to use for parallel processing. Default is 1 (single core).
         output_prefix: Optional prefix for output files. If provided, results will be written to {output_prefix}.pkl
+        state_key: Annotation key for location states. Default is "location".
         verify_ultrametric: Whether to verify that each tree is ultrametric. Default is False.
         
     Returns:
@@ -286,7 +294,7 @@ def get_all_posterior_metastasis_times(
     all_met_events = {}
     
     with Pool(processes=cores) as pool:
-        all_times = pool.map(_process_tree_for_times_wrapper, [(tree, primary_tissue, total_time, verify_ultrametric) for tree in trees_to_analyze])
+        all_times = pool.map(_process_tree_for_times_wrapper, [(tree, primary_tissue, total_time, state_key, verify_ultrametric) for tree in trees_to_analyze])
     
     # Store results with tree label
     for i, (tree, met_times) in enumerate(zip(trees_to_analyze, all_times)):
@@ -308,15 +316,18 @@ def compute_posterior_mutual_info(
     threads: int = 1,
     output_file_matrix: Optional[str] = None,
     output_file_information: Optional[str] = None,
+    cores: int = 1,
+    state_key: str = "location",
 ) -> Tuple[float, np.ndarray, List[str]]:
     """Calculate mutual information from migration patterns in a set of trees.
 
     Args:
         trees: Dendropy TreeList object
         primary_tissue: Name of the origin tissue
-        threads: Number of threads to use for parallel processing
+        cores: Number of threads to use for parallel processing
         output_file_matrix: Optional path to save the count matrix
         output_file_information: Optional path to save the mutual information score
+        state_key: Annotation key for location states. Default is "location".
 
     Returns:
         Tuple containing:
@@ -337,20 +348,20 @@ def compute_posterior_mutual_info(
 
         for node in tree.preorder_node_iter():
             if node.parent_node:
-                source = node.parent_node.annotations.get_value("location")
-                target = node.annotations.get_value("location")
+                source = node.parent_node.annotations.get_value(state_key)
+                target = node.annotations.get_value(state_key)
                 types.add(source)
                 types.add(target)
                 counts[source][target] += 1
             else:
-                target = node.annotations.get_value("location")
+                target = node.annotations.get_value(state_key)
                 types.add(primary_tissue)
                 types.add(target)
                 counts[primary_tissue][target] += 1
 
         return types, counts
 
-    with ThreadPoolExecutor(max_workers=threads) as executor:
+    with ThreadPoolExecutor(max_workers=cores) as executor:
         results = executor.map(process_tree, trees)
 
     for t_types, m_counts in results:
@@ -499,7 +510,7 @@ def get_consensus_times_and_classifications(
 
 
 def sample_beast_trees_and_append_tissue_to_names(
-    nexus_file: str, outdir: str, num_samples: int = 10
+    nexus_file: str, outdir: str, num_samples: int = 10, state_key: str = "location"
 ) -> None:
     """
     Sample 10 trees from the last 50% of the trees in a BEAST nexus file,
@@ -507,7 +518,7 @@ def sample_beast_trees_and_append_tissue_to_names(
     Save each modified tree as a newick file in the specified output directory.
     """
     # Read trees from nexus file
-    tree_collection = dendropy.TreeList.get_from_path(nexus_file, schema="nexus")
+    tree_collection = TreeList.get_from_path(nexus_file, schema="nexus")
     trees = list(tree_collection)
 
     # Discard first 50% of trees
@@ -525,8 +536,8 @@ def sample_beast_trees_and_append_tissue_to_names(
                 continue
             else:
                 tissue_label = (
-                    str(node.annotations["location"].value)
-                    .split("location=")[-1]
+                    str(node.annotations[state_key].value)
+                    .split(f"{state_key}=")[-1]
                     .replace("'", "")
                 )
                 # Set node name to tissue.currentname format

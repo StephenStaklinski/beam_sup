@@ -1,8 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-from Bio import Phylo
-from Bio.Phylo.Newick import Tree
 
 
 def format_beam_inputs(

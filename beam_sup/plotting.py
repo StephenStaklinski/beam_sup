@@ -1,5 +1,6 @@
-import matplotlib
-matplotlib.use("Agg")
+import os
+os.environ["QT_QPA_PLATFORM"] = "offscreen" # Use offscreen rendering
+import re
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Optional, Dict, List, Union, Tuple
@@ -8,18 +9,56 @@ import networkx as nx
 import numpy as np
 from collections import defaultdict
 from ete3 import Tree, TreeStyle, NodeStyle, TextFace, CircleFace
-import os
-import re
 
-from .config import (
-    DEFAULT_FIGURE_SIZE,
-    DEFAULT_FONT_SIZE,
-    DEFAULT_COLORS,
-    DEFAULT_NODE_STYLES,
-    DEFAULT_PLOT_STYLES,
-    DEFAULT_MIN_PROB_THRESHOLD,
-    DEFAULT_TREE_STYLE,
-)
+# Set plotting preferences
+import matplotlib as mpl
+mpl.use("Agg")  # Use non-interactive backend
+mpl.rcParams["font.family"] = "sans-serif"
+mpl.rcParams["font.sans-serif"] = ["DejaVu Sans"]
+mpl.rcParams["pdf.fonttype"] = 42
+mpl.rcParams["ps.fonttype"] = 42
+
+
+# Default params
+DEFAULT_MIN_PROB_THRESHOLD = 0.5
+DEFAULT_FIGURE_SIZE = (12, 6)
+DEFAULT_FONT_SIZE = 18
+DEFAULT_COLORS = [
+    "#006400",  # Dark Green
+    "#FF0000",  # Red
+    "#0000CD",  # Medium Blue
+    "#FFA500",  # Orange
+    "#800080",  # Purple
+    "#808080",  # Gray
+    "#FFC0CB",  # Pink
+    "#ADD8E6",  # Light Blue
+    "#A52A2A",  # Brown
+    "#FFFF00",  # Yellow
+] * 3  # Repeat colors if needed for more tissues
+DEFAULT_PLOT_STYLES = {
+    "linewidth": 2,
+    "alpha": 0.3,
+    "bins": 100,
+    "legend_position": (1.05, 0.75),
+    "legend_title": "Target Tissue",
+    "legend_fontsize": 22,
+    "legend_title_fontsize": 22,
+}
+DEFAULT_NODE_STYLES = {
+    "shape": "box",
+    "size": 10,
+    "line_width": 3,
+    "line_color": "black",
+}
+DEFAULT_TREE_STYLE = {
+    "rotation": 90,
+    "scale": 1,
+    "show_leaf_name": True,
+    "show_branch_length": False,
+    "show_border": False,
+    "show_scale": False,
+    "mode": "r",
+}
 
 
 def plot_parameters(
@@ -209,6 +248,7 @@ def plot_sampled_tree(
     total_time: float,
     output_prefix: str,
     tree_num: int,
+    state_key: str = "location",
 ) -> None:
     """
     Plot a sampled tree with its migration graph and timing.
@@ -229,7 +269,7 @@ def plot_sampled_tree(
     i = 1
     for node in tree.traverse():
         # Extract location from annotation
-        match = re.search(r'&location="([^"]+)"', node.name)
+        match = re.search(rf'&{state_key}="([^"]+)"', node.name)
         if match:
             node.tissue = match.group(1)
             # Keep original name without annotation
@@ -350,7 +390,6 @@ def plot_sampled_tree(
         plt.close()
 
     # Plot tree
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
     ts = TreeStyle()
     ts.rotation = DEFAULT_TREE_STYLE["rotation"]
     ts.scale = DEFAULT_TREE_STYLE["scale"]

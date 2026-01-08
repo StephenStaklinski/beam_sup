@@ -35,8 +35,8 @@ test = [
 ]
 
 [project.scripts]
-run_met_cancer_barcode_simulation = "beam_sup.beam_sup:run_full_simulation"
-overlay_barcode_only_simulation = "beam_sup.beam_sup:simulate_barcode_overlay_only"
+run_met_cancer_barcode_simulation = "beam_sup.core:run_full_simulation"
+overlay_barcode_only_simulation = "beam_sup.core:simulate_barcode_overlay_only"
 
 [project.urls]
 Homepage = "https://github.com/StephenStaklinski/beam_sup"
