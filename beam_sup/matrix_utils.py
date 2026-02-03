@@ -151,9 +151,23 @@ def expand_clones_with_multiple_tissues(
 
 def collapse_character_matrix(char_matrix_df, tissue_label_dict=None):
     all_columns = char_matrix_df.columns.tolist()
+    # Remove duplicate rows
     sorted_char_matrix = char_matrix_df.sort_values(by=all_columns)
     unique_rows = sorted_char_matrix.drop_duplicates(keep="first")
+    # Preserve original order of first occurrence
+    original_order = {}
+    for pos, (_, row) in enumerate(char_matrix_df.iterrows()):
+        row_key = tuple(row.tolist())
+        if row_key not in original_order:
+            original_order[row_key] = pos
+    unique_rows = unique_rows.copy()
+    unique_rows["_original_order"] = unique_rows.apply(
+        lambda row: original_order.get(tuple(row.tolist()), float("inf")), axis=1
+    )
+    unique_rows = unique_rows.sort_values("_original_order").drop(columns="_original_order")
+    # Rename rows to clone names
     group_names = [f"clone{i+1}" for i in range(len(unique_rows))]
+    # Make maps to track clone names to original rows and tissues
     group_to_originals = {}
     group_to_tissues = {}
     for group_name, (_, unique_row) in zip(group_names, unique_rows.iterrows()):
