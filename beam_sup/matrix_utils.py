@@ -149,7 +149,7 @@ def expand_clones_with_multiple_tissues(
     return expanded_matrix_df, expanded_tissues_df
 
 
-def collapse_character_matrix(char_matrix_df, tissue_label_dict):
+def collapse_character_matrix(char_matrix_df, tissue_label_dict=None):
     all_columns = char_matrix_df.columns.tolist()
     sorted_char_matrix = char_matrix_df.sort_values(by=all_columns)
     unique_rows = sorted_char_matrix.drop_duplicates(keep="first")
@@ -160,8 +160,9 @@ def collapse_character_matrix(char_matrix_df, tissue_label_dict):
         # Find all rows in sorted_char_matrix that match the unique_row
         original_row_names = sorted_char_matrix[sorted_char_matrix.eq(unique_row).all(axis=1)].index.tolist()
         group_to_originals[group_name] = ",".join(original_row_names)
-        original_tissues = ",".join(list(set([tissue_label_dict[cell] for cell in original_row_names])))
-        group_to_tissues[group_name] = original_tissues
+        if tissue_label_dict is not None:
+            original_tissues = ",".join(list(set([tissue_label_dict[cell] for cell in original_row_names])))
+            group_to_tissues[group_name] = original_tissues
     # Replace index names in unique_rows with the appropriate group name
     unique_rows.index = group_names
     unique_rows = unique_rows.replace('-', -1)  # Ensure missing data is -1 as integer
