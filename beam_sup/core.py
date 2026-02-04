@@ -475,7 +475,7 @@ def run_full_simulation():
     # Overlay simulated CRISPR barcode data
     overlay_simulated_crispr_barcode_data(
         ground_truth_tree_filepath=ground_truth_tree,
-        outprefix=args.outprefix,
+        outprefix=f"{outputdir}/{args.outprefix}",
         num_sites=args.num_sites,
         mutationrate=args.mutationrate,
         heritable_silencing_rate=args.heritable_silencing_rate,
