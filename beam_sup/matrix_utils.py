@@ -61,7 +61,7 @@ def convert_matrix_to_row_successive_matrix(
 
     Args:
         character_matrix (pd.DataFrame): The input character matrix with clones as rows and sites as columns.
-        mut_dict (dict): Dictionary mapping the current mutation integers to mutation strings. Should work for both single dict and nested dict cassiopeia/laml formats.
+        mut_dict (Optional: dict): Dictionary mapping the current mutation integers to mutation strings. Should work for both single dict and nested dict cassiopeia/laml formats.
         indel_priors (Optional: pd.DataFrame): DataFrame containing mutation prior counts, indexed by mutation string. Default is None.
 
     Returns:
@@ -79,12 +79,15 @@ def convert_matrix_to_row_successive_matrix(
             # Skip undedited and missing sites
             if mut == 0 or mut == -1:
                 continue
-            if isinstance(mut_dict, dict) and all(isinstance(v, dict) for v in mut_dict.values()):
-                # Nested dictionary case - compatibility for quinn et al. and laml, etc. site specific priors style
-                mut_str = mut_dict[int(site[1:]) - 1][mut]
+            if mut_dict is not None:
+                if isinstance(mut_dict, dict) and all(isinstance(v, dict) for v in mut_dict.values()):
+                    # Nested dictionary case - compatibility for quinn et al. and laml, etc. site specific priors style
+                    mut_str = mut_dict[int(site[1:]) - 1][mut]
+                else:
+                    # Single dictionary case - compatibility for simpler mutation dicts across the full matrix all sites in one
+                    mut_str = mut_dict[mut]
             else:
-                # Single dictionary case - compatibility for simpler mutation dicts across the full matrix all sites in one
-                mut_str = mut_dict[mut]
+                mut_str = str(mut)
             # Replace the mutation with the successive mutation
             if mut_str not in successive_mut_dict:
                 successive_mut_dict[mut_str] = i
