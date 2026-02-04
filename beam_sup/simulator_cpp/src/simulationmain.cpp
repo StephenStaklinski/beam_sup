@@ -97,7 +97,7 @@ int main(int argc, char** argv)
   .refOption("ge", "Last generation for migrations (default: -1, meaning migrations continue until the end)", migrationEndGeneration)
   .refOption("p", "Keep polytomies in the resulting cell tree (default: false)", keepPolytomies)
   .refOption("o", "Output directory (default: '.')", outputDirectory)
-  .refOptions("op", "Output prefix for simulation results (default: 'test')", outputPrefix);
+  .refOption("op", "Output prefix for simulation results (default: 'test')", outputPrefix);
   ap.parse();
 
   // Round about way to set resolvePolytomies due to ArgParser behavior with bool variables always being false by default
