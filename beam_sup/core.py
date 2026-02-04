@@ -462,20 +462,15 @@ def run_full_simulation():
     )
 
     # Find the ground truth tree file
-    outputdir = args.outdir
-    ground_truth_tree = None
-    if os.path.isdir(outputdir):
-        for fname in os.listdir(outputdir):
-            if fname.endswith(".nwk") and fname.startswith(args.outprefix):
-                ground_truth_tree = os.path.join(outputdir, fname)
-                break
-    if ground_truth_tree is None:
-        raise FileNotFoundError(f"Ground truth tree file (.nwk) not found in {outputdir}.")
+    ground_truth_tree = os.path.join(args.outdir, f"{args.outprefix}_cell_tree.nwk")
+    if not os.path.isfile(ground_truth_tree):
+        raise FileNotFoundError(f"Ground truth tree file not found: {ground_truth_tree}")
 
     # Overlay simulated CRISPR barcode data
     overlay_simulated_crispr_barcode_data(
         ground_truth_tree_filepath=ground_truth_tree,
-        outprefix=f"{outputdir}/{args.outprefix}",
+        outputdir=args.outdir,
+        outprefix=args.outprefix,
         num_sites=args.num_sites,
         mutationrate=args.mutationrate,
         heritable_silencing_rate=args.heritable_silencing_rate,

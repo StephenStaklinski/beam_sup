@@ -122,6 +122,7 @@ def simulate_metastatic_cancer_population(
 
 def overlay_simulated_crispr_barcode_data(
     ground_truth_tree_filepath: str,
+    outputdir: str,
     outprefix: str,
     num_sites: int = 50,
     mutationrate: float = 0.1,
@@ -264,5 +265,5 @@ def overlay_simulated_crispr_barcode_data(
 
     lt_sim.overlay_data(ground_truth_tree)
     final_matrix = ground_truth_tree.character_matrix
-    out_matrix = outprefix + "_indel_character_matrix.tsv"
+    out_matrix = f"{outputdir}/{outprefix}_indel_character_matrix.tsv"
     final_matrix.to_csv(out_matrix, sep="\t")
