@@ -10,6 +10,7 @@ std::string filenameMigrationMatrix;
 // Output results of the simulation to files in the specified directory
 void output(const Simulation& simulation,
       const std::string& outputDirectory,
+      const std::string& outputPrefix,
       int seed)
 {
   char buf[1024];
@@ -32,27 +33,27 @@ void output(const Simulation& simulation,
   const Tree& CT = simulation.getCellTree();
 
   // Output cell tree in Newick format for phylogenetic analysis
-  snprintf(buf, 1024, "%s/cell_tree_seed%d.nwk", outputDirectory.c_str(), seed);
+  snprintf(buf, 1024, "%s/%s_cell_tree.nwk", outputDirectory.c_str(), outputPrefix.c_str());
   std::ofstream outCT_newick(buf);
   const std::map<int, int> cellToGeneration = simulation.getCellToGenerationNumber();
   simulation.writeNewick(outCT_newick, CT, cellToGeneration);
   outCT_newick.close();
 
   // Output leaf labeling for the cell tree
-  snprintf(buf, 1024, "%s/cell_tree_seed%d.labeling", outputDirectory.c_str(), seed);
+  snprintf(buf, 1024, "%s/%s_cell_tree.labeling", outputDirectory.c_str(), outputPrefix.c_str());
   std::ofstream outCT_labeling(buf);
   CT.writeLeafLabeling(outCT_labeling);
   outCT_labeling.close();
 
   // Output vertex labeling (all internal nodes and leaves) for the cell tree
-  snprintf(buf, 1024, "%s/cell_tree_seed%d.vertex.labeling", outputDirectory.c_str(), seed);
+  snprintf(buf, 1024, "%s/%s_cell_tree.vertex.labeling", outputDirectory.c_str(), outputPrefix.c_str());
   std::ofstream outCT_vertex_labeling(buf);
   const StringNodeMap& cPlus = simulation.getCellVertexLabeling();
   CT.writeVertexLabeling(outCT_vertex_labeling, cPlus);
   outCT_vertex_labeling.close();
 
   // Output the migration history implied by the output cell tree
-  snprintf(buf, 1024, "%s/cell_tree_seed%d.migrations", outputDirectory.c_str(), seed);
+  snprintf(buf, 1024, "%s/%s_cell_tree.migrations", outputDirectory.c_str(), outputPrefix.c_str());
   std::ofstream outMig(buf);
   simulation.writeMigrationHistory(outMig, CT, cPlus);
   outMig.close();
@@ -70,6 +71,7 @@ int main(int argc, char** argv)
   int maxNrAnatomicalSites = -1; // Maximum number of anatomical sites
   int maxGenerations = 250; // Maximum number of cell division generations
   std::string outputDirectory = "."; // Output directory
+  std::string outputPrefix = "test"; // Output prefix
   int N = -1; // Number of successful simulations
   int downsampleCellNumber = 100; // Number of cells to downsample to
   int inputNumPossibleAnatomicalSites = 10; // Number of possible anatomical sites for default migration matrix
@@ -95,6 +97,7 @@ int main(int argc, char** argv)
   .refOption("ge", "Last generation for migrations (default: -1, meaning migrations continue until the end)", migrationEndGeneration)
   .refOption("p", "Keep polytomies in the resulting cell tree (default: false)", keepPolytomies)
   .refOption("o", "Output directory (default: '.')", outputDirectory);
+  .refOptions("op", "Output prefix for simulation results (default: 'test')", outputPrefix);
   ap.parse();
 
   // Round about way to set resolvePolytomies due to ArgParser behavior with bool variables always being false by default
@@ -196,6 +199,7 @@ int main(int argc, char** argv)
     std::cout << std::endl;
     std::cout << "Seed: " << seed << std::endl;
     std::cout << "Output Directory: " << outputDirectory << std::endl;
+    std::cout << "Output Prefix: " << outputPrefix << std::endl;
     std::cout << "Carrying Capacity: " << K << std::endl;
     std::cout << "Mutation Frequency Threshold: " << mutFreqThreshold << std::endl;
     std::cout << "Mutation Rate: " << mutationRate << std::endl;
@@ -242,7 +246,7 @@ int main(int argc, char** argv)
     {
       // Output results if simulation succeeds
       std::cout << "Simulation successful, outputting results." << std::endl;
-      output(simulation, outputDirectory, seed);
+      output(simulation, outputDirectory, outputPrefix, seed);
       run = false;
     } else {
       // If simulation fails, draw a new positive seed and retry
