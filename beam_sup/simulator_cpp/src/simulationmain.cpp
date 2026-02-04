@@ -96,7 +96,7 @@ int main(int argc, char** argv)
   .refOption("gs", "Generation to start migrations (default: 0, meaning migrations start from the beginning)", migrationStartGeneration)
   .refOption("ge", "Last generation for migrations (default: -1, meaning migrations continue until the end)", migrationEndGeneration)
   .refOption("p", "Keep polytomies in the resulting cell tree (default: false)", keepPolytomies)
-  .refOption("o", "Output directory (default: '.')", outputDirectory);
+  .refOption("o", "Output directory (default: '.')", outputDirectory)
   .refOptions("op", "Output prefix for simulation results (default: 'test')", outputPrefix);
   ap.parse();
 
