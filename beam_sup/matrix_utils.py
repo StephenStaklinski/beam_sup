@@ -53,7 +53,7 @@ def calculate_avg_informative_characters(input_file: str) -> float:
 
 
 def convert_matrix_to_row_successive_matrix(
-    character_matrix: pd.DataFrame, mut_dict: dict, indel_priors: pd.DataFrame = None
+    character_matrix: pd.DataFrame, mut_dict: dict = None, indel_priors: pd.DataFrame = None
 ) -> tuple[pd.DataFrame, dict, dict]:
     """
     Converts a character matrix to a successive character matrix, mapping mutations to unique successive integers.
